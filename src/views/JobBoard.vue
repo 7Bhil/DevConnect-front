@@ -1,6 +1,20 @@
 <script setup>
+import { onMounted, ref } from 'vue'
 import { Search, MapPin, ChevronDown, Clock, Building2 } from 'lucide-vue-next'
-import { MOCK_JOBS } from '../constants'
+import { fetchJobs } from '../api'
+
+const jobs = ref([])
+const loading = ref(true)
+
+onMounted(async () => {
+  try {
+    jobs.value = await fetchJobs()
+  } catch (error) {
+    console.error(error)
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <template>
@@ -54,12 +68,15 @@ import { MOCK_JOBS } from '../constants'
       </div>
     </div>
 
-    <!-- Job List -->
-    <div class="space-y-6">
+    <!-- Jobs Grid -->
+    <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
+      <div v-for="i in 3" :key="i" class="h-48 bg-surface rounded-2xl animate-pulse border border-border"></div>
+    </div>
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
       <div 
-        v-for="job in MOCK_JOBS" 
+        v-for="job in jobs" 
         :key="job.id" 
-        class="group bg-surface p-6 rounded-2xl border border-border hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 flex flex-col md:flex-row gap-6"
+        class="group bg-surface p-8 rounded-3xl border border-border shadow-sm hover:shadow-2xl hover:shadow-primary/10 hover:border-primary/20 transition-all duration-500 cursor-pointer relative overflow-hidden"
       >
         <div class="w-16 h-16 bg-background rounded-2xl border border-border flex items-center justify-center p-3 shrink-0">
           <img :src="job.logo" :alt="job.company" class="w-full h-full object-contain" />
@@ -116,10 +133,7 @@ import { MOCK_JOBS } from '../constants'
     </div>
     
     <div class="text-center pt-8 pb-12">
-      <button class="inline-flex items-center gap-2 bg-surface border border-border px-8 py-3 rounded-xl font-bold text-text hover:border-primary hover:text-primary transition-all">
-        Charger plus d'opportunités
-      </button>
-      <p class="text-xs text-text-muted mt-4">Affichage de 3 sur 154 postes ouverts</p>
+      <p class="text-xs text-text-muted mt-4">Affichage de {{ jobs.length }} offre(s) active(s)</p>
     </div>
   </div>
 </template>

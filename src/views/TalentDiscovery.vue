@@ -1,13 +1,30 @@
 <script setup>
-import { 
-  MapPin, 
-  Mail, 
-  User, 
-  Filter, 
-  ChevronDown, 
-  CheckCircle2 
+import { onMounted, ref } from 'vue'
+import {
+  Users,
+  MapPin,
+  Terminal,
+  Search,
+  ChevronRight,
+  Filter,
+  CheckCircle2,
+  Mail,
+  User
 } from 'lucide-vue-next'
-import { MOCK_TALENTS } from '../constants'
+import { fetchTalents } from '../api'
+
+const talents = ref([])
+const loading = ref(true)
+
+onMounted(async () => {
+  try {
+    talents.value = await fetchTalents()
+  } catch (error) {
+    console.error(error)
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <template>
@@ -66,10 +83,10 @@ import { MOCK_TALENTS } from '../constants'
     <div class="flex-1 bg-background overflow-y-auto no-scrollbar p-8 transition-colors duration-300">
       <div class="max-w-5xl mx-auto space-y-8">
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
-           <div>
+            <div>
               <h1 class="text-4xl font-black text-text tracking-tight mb-2">Découvrir les Talents</h1>
-              <p class="text-lg text-text-muted font-medium">1,240 développeurs sont disponibles pour leur prochain défi.</p>
-           </div>
+              <p class="text-lg text-text-muted font-medium">{{ talents.length }} développeur{{ talents.length > 1 ? 's sont' : ' est' }} disponible{{ talents.length > 1 ? 's' : '' }} pour leur prochain défi.</p>
+            </div>
            <div class="flex items-center gap-3">
               <span class="text-xs font-bold text-text-muted uppercase tracking-widest">Trier par :</span>
               <button class="flex items-center gap-2 bg-surface border border-border px-4 py-2 rounded-xl text-xs font-bold text-text hover:border-primary transition-colors">
@@ -77,9 +94,12 @@ import { MOCK_TALENTS } from '../constants'
               </button>
            </div>
         </div>
-
-        <div class="grid grid-cols-1 gap-6">
-          <div v-for="talent in MOCK_TALENTS" :key="talent.id" class="group bg-surface p-8 rounded-3xl border border-border hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 flex flex-col md:flex-row gap-8 relative overflow-hidden">
+        <!-- Talent Grid -->
+        <div class="flex-1 space-y-6">
+          <div v-if="loading" class="grid grid-cols-1 gap-6">
+             <div v-for="i in 3" :key="i" class="h-64 bg-surface rounded-3xl animate-pulse border border-border"></div>
+          </div>
+          <div v-else v-for="talent in talents" :key="talent.id" class="bg-surface rounded-3xl p-8 border border-border shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all group relative overflow-hidden flex flex-col md:flex-row gap-8 relative overflow-hidden">
             <div class="shrink-0 relative">
               <div class="w-24 h-24 rounded-[2rem] overflow-hidden border-4 border-background ring-1 ring-border group-hover:scale-105 transition-transform duration-500 shadow-xl shadow-text/5">
                 <img :src="talent.avatar" class="w-full h-full object-cover" alt="" />

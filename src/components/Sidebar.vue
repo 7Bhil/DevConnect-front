@@ -7,19 +7,36 @@ import {
   User,
   Settings,
   HelpCircle,
-  FolderOpen
+  FolderOpen,
+  ShieldAlert
 } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
+import { useAuth } from '../store/auth'
+import { computed } from 'vue'
 
 const route = useRoute()
+const auth = useAuth()
 
-const navLinks = [
-  { to: '/', icon: LayoutDashboard, label: 'Tableau de bord' },
-  { to: '/jobs', icon: Briefcase, label: "Offres d'emploi" },
-  { to: '/talents', icon: Users, label: 'Trouver des talents' },
-  { to: '/messages', icon: MessageSquare, label: 'Messagerie' },
-  { to: '/profile', icon: User, label: 'Mon Profil' },
-]
+const navLinks = computed(() => {
+  const baseLinks = [
+    { to: '/', icon: LayoutDashboard, label: 'Tableau de bord' },
+    { to: '/jobs', icon: Briefcase, label: "Offres d'emploi" },
+    { to: '/talents', icon: Users, label: 'Trouver des talents' },
+  ]
+  
+  if (auth.state.isAuthenticated) {
+    baseLinks.push(
+      { to: '/messages', icon: MessageSquare, label: 'Messagerie' },
+      { to: '/profile', icon: User, label: 'Mon Profil' }
+    )
+  }
+
+  if (auth.state.user?.role === 'superadmin') {
+    baseLinks.push({ to: '/admin', icon: ShieldAlert, label: 'Admin Dashboard' })
+  }
+  
+  return baseLinks
+})
 
 const helpLinks = [
   { to: '/settings', icon: Settings, label: 'Paramètres' },

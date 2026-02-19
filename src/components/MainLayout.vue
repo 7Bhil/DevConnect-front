@@ -1,14 +1,19 @@
 <script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import Sidebar from './Sidebar.vue'
 import Header from './Header.vue'
+
+const route = useRoute()
+const isAuthPage = computed(() => ['Login', 'Register'].includes(route.name))
 </script>
 
 <template>
   <div class="flex min-h-screen bg-background transition-colors duration-300">
-    <Sidebar />
-    <div class="flex-1 lg:ml-64 flex flex-col min-h-screen">
-      <Header />
-      <main class="p-8">
+    <Sidebar v-if="!isAuthPage" />
+    <div :class="['flex-1 flex flex-col min-h-screen', !isAuthPage ? 'lg:ml-64' : '']">
+      <Header v-if="!isAuthPage" />
+      <main :class="[!isAuthPage ? 'p-8' : '']">
         <router-view v-slot="{ Component }">
           <transition 
             name="fade" 

@@ -14,36 +14,12 @@ import {
   MessageCircle,
   ArrowRight
 } from 'lucide-vue-next'
-import { MOCK_TALENTS } from '../constants'
+import { useAuth } from '../store/auth'
 
-const me = MOCK_TALENTS[1] // Alexandre Rivière
+const auth = useAuth()
+const me = auth.state.user || { name: 'Utilisateur', role: 'Professionnel', avatar: 'https://picsum.photos/200', location: 'Non renseigné', skills: [] }
 
-const projects = [
-  {
-    title: 'QuantX Dashboard',
-    image: 'https://picsum.photos/seed/quant/800/500',
-    desc: 'Moteur d\'analyse financière en temps réel avec graphiques interactifs et analyse prédictive.',
-    collabs: 2
-  },
-  {
-    title: 'SecureVault API',
-    image: 'https://picsum.photos/seed/vault/800/500',
-    desc: 'Une API de stockage chiffrée de bout en bout avec architecture zero-knowledge. Intégration S3.',
-    stars: 428
-  },
-  {
-    title: 'Lumina AI Chat',
-    image: 'https://picsum.photos/seed/lumina/800/500',
-    desc: 'Widget de chat IA personnalisable pour plateformes SaaS utilisant les derniers modèles OpenAI.',
-    tech: 'TypeScript'
-  },
-  {
-    title: 'SwiftCart Engine',
-    image: 'https://picsum.photos/seed/cart/800/500',
-    desc: 'Infrastructure de commerce headless conçue pour la rapidité. Supporte des millions de requêtes.',
-    tech: 'Go / Redis'
-  }
-]
+const projects = []
 </script>
 
 <template>
@@ -153,42 +129,20 @@ const projects = [
               </button>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div v-if="projects.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div v-for="project in projects" :key="project.title" class="group bg-surface rounded-3xl overflow-hidden border border-border shadow-sm hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 flex flex-col">
-                <div class="aspect-video relative overflow-hidden bg-background">
-                  <img :src="project.image" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="" />
-                  <div class="absolute inset-0 bg-gradient-to-t from-text/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-6">
-                     <button class="bg-surface text-text px-6 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2">
-                        Détails <ExternalLink :size="14" />
-                     </button>
-                  </div>
-                </div>
-                <div class="p-8 flex flex-col flex-1">
-                   <div class="flex items-center justify-between mb-3">
-                     <h4 class="text-xl font-black text-text group-hover:text-primary transition-colors">{{ project.title }}</h4>
-                     <ExternalLink :size="18" class="text-border group-hover:text-primary" />
-                   </div>
-                   <p class="text-sm text-text-muted leading-relaxed font-medium mb-8 flex-1">{{ project.desc }}</p>
-                   
-                   <div class="flex items-center justify-between pt-6 border-t border-border mt-auto">
-                      <div v-if="project.collabs" class="flex items-center gap-3">
-                        <div class="flex -space-x-2">
-                           <img src="https://picsum.photos/seed/1/40/40" class="w-6 h-6 rounded-full border-2 border-surface" />
-                           <img src="https://picsum.photos/seed/2/40/40" class="w-6 h-6 rounded-full border-2 border-surface" />
-                        </div>
-                        <span class="text-[10px] font-bold text-text-muted">+{{ project.collabs }} collabs</span>
-                      </div>
-                      <div v-if="project.stars" class="flex items-center gap-1.5 text-amber-500">
-                         <Star :size="14" fill="currentColor" />
-                         <span class="text-xs font-black">{{ project.stars }} stars</span>
-                      </div>
-                      <div v-if="project.tech" class="flex items-center gap-2">
-                         <div class="w-2 h-2 rounded-full bg-primary"></div>
-                         <span class="text-[10px] font-black text-text-muted uppercase tracking-widest">{{ project.tech }}</span>
-                      </div>
-                   </div>
-                </div>
+                <!-- ... -->
               </div>
+            </div>
+            <div v-else class="bg-surface rounded-3xl border-2 border-dashed border-border p-20 text-center">
+              <div class="p-6 bg-primary/5 rounded-full w-fit mx-auto mb-6">
+                <FolderOpen class="text-primary" :size="48" />
+              </div>
+              <h4 class="text-2xl font-black text-text mb-2">Votre portfolio est vide</h4>
+              <p class="text-text-muted mb-8 max-w-md mx-auto">Présentez vos meilleures réalisations pour attirer l'attention des recruteurs et d'autres développeurs.</p>
+              <button class="bg-primary text-white px-10 py-4 rounded-2xl font-black shadow-xl shadow-primary/20 hover:scale-105 transition-all">
+                Ajouter mon premier projet
+              </button>
             </div>
          </div>
       </div>

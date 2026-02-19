@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { 
   Search, 
   Send, 
@@ -9,15 +9,33 @@ import {
   MoreVertical, 
   Plus, 
   Code, 
-  Smile 
+  Smile,
+  Paperclip,
+  Check,
+  ChevronLeft
 } from 'lucide-vue-next'
-import { MOCK_CONVERSATIONS } from '../constants'
+import { fetchMessages } from '../api'
 
-const activeChat = ref(MOCK_CONVERSATIONS[0])
+const conversations = ref([])
+const activeId = ref('c2')
+const loading = ref(true)
+
+onMounted(async () => {
+  try {
+    conversations.value = await fetchMessages()
+  } catch (error) {
+    console.error(error)
+  } finally {
+    loading.value = false
+  }
+})
+
+const activeChat = ref(null) // Initialize as null, will be set in onMounted
 const message = ref('')
 
 const setActiveChat = (conv) => {
   activeChat.value = conv
+  activeId.value = conv.id // Update activeId when chat changes
 }
 </script>
 
@@ -34,22 +52,26 @@ const setActiveChat = (conv) => {
          </div>
          <div class="relative">
            <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" :size="16" />
-           <input 
-             type="text" 
-             class="w-full bg-background border border-border rounded-xl py-2 pl-10 pr-4 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary text-text placeholder:text-text-muted transition-all" 
-             placeholder="Rechercher..." 
+           <input
+             type="text"
+             class="w-full bg-background border border-border rounded-xl py-2 pl-10 pr-4 text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary text-text placeholder:text-text-muted transition-all"
+             placeholder="Rechercher..."
            />
          </div>
       </div>
-      
+
       <div class="flex-1 overflow-y-auto no-scrollbar">
-        <button 
-          v-for="conv in MOCK_CONVERSATIONS" 
+        <div v-if="loading" class="p-4 space-y-4">
+           <div v-for="i in 5" :key="i" class="h-20 bg-background rounded-2xl animate-pulse border border-border"></div>
+        </div>
+        <button
+          v-else
+          v-for="conv in conversations"
           :key="conv.id"
           @click="setActiveChat(conv)"
           class="w-full flex items-center gap-3 p-4 transition-all border-l-4"
-          :class="activeChat.id === conv.id 
-            ? 'bg-primary/5 border-primary' 
+          :class="activeChat && activeChat.id === conv.id
+            ? 'bg-primary/5 border-primary'
             : 'bg-transparent border-transparent hover:bg-primary/5'"
         >
           <div class="relative shrink-0">
@@ -73,7 +95,7 @@ const setActiveChat = (conv) => {
     </div>
 
     <!-- Chat Window -->
-    <div class="flex-1 flex flex-col h-full bg-background transition-colors duration-300">
+    <div v-if="activeChat" class="flex-1 flex flex-col h-full bg-background transition-colors duration-300">
       <!-- Chat Header -->
       <header class="h-16 bg-surface border-b border-border px-6 flex items-center justify-between shrink-0 transition-colors duration-300">
         <div class="flex items-center gap-3">
@@ -100,44 +122,12 @@ const setActiveChat = (conv) => {
            <span class="text-[10px] font-bold text-text-muted uppercase tracking-widest bg-surface border border-border px-3 py-1 rounded-full shadow-sm">Aujourd'hui</span>
          </div>
 
-         <!-- Mock History -->
-         <div class="flex gap-4 max-w-xl">
-            <img :src="activeChat.participant.avatar" class="w-8 h-8 rounded-full shrink-0 self-end mb-1" />
-            <div class="bg-surface p-4 rounded-2xl rounded-bl-none shadow-sm border border-border text-sm text-text leading-relaxed">
-              Salut ! J'ai poussé quelques changements sur la branche <code class="bg-primary/10 px-1.5 py-0.5 rounded text-primary font-mono text-xs">auth-middleware</code>. Tu peux jeter un œil à la PR ?
+         <div class="flex-1 flex flex-col items-center justify-center text-text-muted py-20 px-8 text-center">
+            <div class="p-6 bg-surface rounded-full mb-4 border border-border">
+              <MessageCircle :size="48" class="opacity-20" />
             </div>
-         </div>
-
-         <div class="flex gap-4 max-w-xl self-end flex-row-reverse">
-            <div class="flex flex-col items-end">
-              <div class="bg-primary p-4 rounded-2xl rounded-br-none shadow-lg text-sm text-white leading-relaxed">
-                Je regarde ça tout de suite. La logique semble correcte, mais je vais lancer la suite de tests localement. Ça devrait prendre 10 min.
-              </div>
-              <span class="text-[10px] font-bold text-primary mt-1 mr-1">Lu 10:45</span>
-            </div>
-         </div>
-
-         <div class="flex gap-4 max-w-xl">
-            <img :src="activeChat.participant.avatar" class="w-8 h-8 rounded-full shrink-0 self-end mb-1" />
-            <div class="bg-surface p-4 rounded-2xl rounded-bl-none shadow-sm border border-border text-sm text-text leading-relaxed w-full">
-              <p class="mb-3">Je pense que le problème est ici :</p>
-              <div class="bg-slate-900 rounded-xl p-4 font-mono text-xs text-slate-300 overflow-x-auto">
-                 <pre><code>{{ `if (expiredAt < Date.now()) {
-  return res.status(401).send('Token Expired');
-}` }}</code></pre>
-              </div>
-            </div>
-         </div>
-
-         <div class="flex gap-4 max-w-xl self-end flex-row-reverse">
-            <div class="bg-primary p-4 rounded-2xl rounded-br-none shadow-lg text-sm text-white leading-relaxed">
-              Ah, je vois ! Tu compares des millisecondes avec des secondes. Classique !
-            </div>
-         </div>
-         
-         <div class="flex items-center gap-2 text-[10px] text-text-muted italic ml-12">
-           <span class="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce"></span>
-           {{ activeChat.participant.name }} est en train d'écrire...
+            <h4 class="text-lg font-black text-text mb-2">Aucun message ici</h4>
+            <p class="text-sm max-w-xs">Envoyez le premier message pour entamer la discussion avec {{ activeChat.participant.name }}.</p>
          </div>
       </div>
 
@@ -168,6 +158,12 @@ const setActiveChat = (conv) => {
            <span class="flex items-center gap-1">Maj + Entrée pour retour ligne</span>
          </div>
       </div>
+    </div>
+    <div v-else class="flex-1 flex flex-col items-center justify-center text-text-muted bg-background transition-colors duration-300">
+       <div class="p-6 bg-surface rounded-full mb-4">
+         <Send :size="48" class="opacity-20" />
+       </div>
+       <p class="font-bold">Sélectionnez une conversation pour commencer</p>
     </div>
   </div>
 </template>
