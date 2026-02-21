@@ -1,12 +1,13 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Mail, Lock, Loader2, ArrowRight, User, Briefcase, AlertCircle, CheckCircle, Globe, Phone, Linkedin } from 'lucide-vue-next'
+import { Mail, Lock, Loader2, ArrowRight, User, Briefcase, AlertCircle, CheckCircle, Globe, Phone, Linkedin, Eye, EyeOff } from 'lucide-vue-next'
 
 const router = useRouter()
 const name = ref('')
 const email = ref('')
 const password = ref('')
+const showPassword = ref(false)
 const loading = ref(false)
 const error = ref('')
 
@@ -16,7 +17,8 @@ const role = ref('developer')
 
 // Étape 2: Informations de contact
 const country = ref('')
-const whatsapp = ref('')
+const phoneIndicatif = ref('+33')
+const phoneNumber = ref('')
 const linkedin = ref('')
 
 // Étape 3: Type de contrat (optionnel)
@@ -34,8 +36,8 @@ const handleNextStep = () => {
     step.value = 2
     error.value = ''
   } else if (step.value === 2) {
-    if (!country.value || !whatsapp.value || !linkedin.value) {
-      error.value = 'Veuillez remplir tous les champs de contact'
+    if (!country.value || !phoneIndicatif.value || !phoneNumber.value) {
+      error.value = 'Veuillez remplir les champs obligatoires'
       return
     }
     step.value = 3
@@ -59,7 +61,7 @@ const handleRegister = async () => {
         password: password.value, 
         role: finalRole.value || 'developer',
         country: country.value,
-        whatsapp: whatsapp.value,
+        whatsapp: phoneIndicatif.value + ' ' + phoneNumber.value,
         linkedin: linkedin.value,
         contractType: contractType.value
       })
@@ -77,23 +79,6 @@ const handleRegister = async () => {
     router.push('/')
   } catch (err) {
     error.value = 'Erreur de connexion au serveur'
-  } finally {
-    loading.value = false
-  }
-} 
-        email: email.value, 
-        password: password.value, 
-        role: finalRole.value,
-        contractType: contractType.value || null
-      })
-    })
-    
-    const data = await response.json()
-    if (!response.ok) throw new Error(data.message || 'Erreur lors de l\'inscription')
-    
-    router.push('/login')
-  } catch (err) {
-    error.value = err.message
   } finally {
     loading.value = false
   }
@@ -127,29 +112,29 @@ const goBack = () => {
         </div>
       </div>
 
-      <div class="bg-surface p-8 rounded-3xl border border-border shadow-2xl shadow-text/5 space-y-6">
-        <div v-if="error" class="p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 text-red-500 text-sm font-bold animate-in shake duration-300">
-          <AlertCircle :size="18" />
+      <div class="bg-surface p-6 sm:p-8 rounded-2xl sm:rounded-3xl border border-border shadow-2xl shadow-text/5 space-y-6">
+        <div v-if="error" class="p-3 sm:p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 text-red-500 text-xs sm:text-sm font-bold animate-in shake duration-300">
+          <AlertCircle :size="16" class="sm:w-4 sm:h-4" />
           {{ error }}
         </div>
 
         <!-- Étape 1: Informations de base -->
         <div v-if="step === 1" class="space-y-4">
-          <div class="text-center mb-6">
-            <h2 class="text-xl font-black text-text mb-2">Informations de base</h2>
-            <p class="text-sm text-text-muted">Commençons par les essentiels</p>
+          <div class="text-center mb-4 sm:mb-6">
+            <h2 class="text-lg sm:text-xl font-black text-text mb-2">Informations de base</h2>
+            <p class="text-xs sm:text-sm text-text-muted">Commençons par les essentiels</p>
           </div>
           
           <div class="space-y-2">
             <label class="text-xs font-black text-text-muted uppercase tracking-widest ml-1">Nom complet</label>
             <div class="relative">
-              <User class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" :size="20" />
+              <User class="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-text-muted w-4 h-4 sm:w-5 sm:h-5" :size="20" />
               <input 
                 v-model="name"
                 type="text" 
                 required
                 placeholder="Jean Dupont"
-                class="w-full bg-background border-border rounded-xl py-4 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-text transition-all outline-none"
+                class="w-full bg-background border-border rounded-xl py-3 sm:py-4 pl-10 sm:pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-text transition-all outline-none"
               />
             </div>
           </div>
@@ -174,11 +159,19 @@ const goBack = () => {
               <Lock class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" :size="20" />
               <input 
                 v-model="password"
-                type="password" 
+                :type="showPassword ? 'text' : 'password'" 
                 required
                 placeholder="Min. 8 caractères"
-                class="w-full bg-background border-border rounded-xl py-4 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-text transition-all outline-none"
+                class="w-full bg-background border-border rounded-xl py-4 pl-12 pr-12 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-text transition-all outline-none"
               />
+              <button 
+                type="button"
+                @click="showPassword = !showPassword"
+                class="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted hover:text-primary transition-colors"
+              >
+                <Eye v-if="!showPassword" :size="20" />
+                <EyeOff v-else :size="20" />
+              </button>
             </div>
           </div>
         </div>
@@ -194,48 +187,48 @@ const goBack = () => {
             <label class="text-xs font-black text-text-muted uppercase tracking-widest ml-1">Pays</label>
             <div class="relative">
               <Globe class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" :size="20" />
-              <select 
-                v-model="country"
-                required
-                class="w-full bg-background border-border rounded-xl py-4 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-text transition-all outline-none appearance-none"
-              >
-                <option value="">Sélectionnez votre pays</option>
-                <option value="France">France</option>
-                <option value="Belgique">Belgique</option>
-                <option value="Suisse">Suisse</option>
-                <option value="Canada">Canada</option>
-                <option value="Maroc">Maroc</option>
-                <option value="Tunisie">Tunisie</option>
-                <option value="Algérie">Algérie</option>
-                <option value="Sénégal">Sénégal</option>
-                <option value="Côte d'Ivoire">Côte d'Ivoire</option>
-                <option value="Autre">Autre</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-xs font-black text-text-muted uppercase tracking-widest ml-1">WhatsApp (avec indicatif)</label>
-            <div class="relative">
-              <Phone class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" :size="20" />
               <input 
-                v-model="whatsapp"
-                type="tel"
+                v-model="country"
+                type="text"
                 required
-                placeholder="+33 6 12 34 56 78"
+                placeholder="France, Belgique, Suisse..."
                 class="w-full bg-background border-border rounded-xl py-4 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-text transition-all outline-none"
               />
             </div>
           </div>
 
           <div class="space-y-2">
-            <label class="text-xs font-black text-text-muted uppercase tracking-widest ml-1">LinkedIn</label>
+            <label class="text-xs font-black text-text-muted uppercase tracking-widest ml-1">WhatsApp</label>
+            <div class="flex gap-2">
+              <div class="relative flex-1 max-w-[100px]">
+                <Phone class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" :size="18" />
+                <input 
+                  v-model="phoneIndicatif"
+                  type="text"
+                  required
+                  placeholder="+33"
+                  class="w-full bg-background border-border rounded-xl py-4 pl-9 pr-2 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-text transition-all outline-none"
+                />
+              </div>
+              <div class="relative flex-1">
+                <input 
+                  v-model="phoneNumber"
+                  type="tel"
+                  required
+                  placeholder="6 12 34 56 78"
+                  class="w-full bg-background border-border rounded-xl py-4 pl-4 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-text transition-all outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-xs font-black text-text-muted uppercase tracking-widest ml-1">LinkedIn (optionnel)</label>
             <div class="relative">
               <Linkedin class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" :size="20" />
               <input 
                 v-model="linkedin"
                 type="url"
-                required
                 placeholder="https://linkedin.com/in/votre-profil"
                 class="w-full bg-background border-border rounded-xl py-4 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-text transition-all outline-none"
               />
@@ -247,12 +240,12 @@ const goBack = () => {
         <div v-if="step === 3" class="space-y-4">
           <div class="text-center mb-6">
             <h2 class="text-xl font-black text-text mb-2">Type de contrat souhaité</h2>
-            <p class="text-sm text-text-muted">Quel type de contrat vous intéresse ?</p>
+            <p class="text-sm text-text-muted">Quel type de contrat vous intéresse ? (Optionnel)</p>
           </div>
           
           <div class="space-y-3">
             <label 
-              v-for="type in ['CDI', 'CDD', 'Freelance', 'Stage', 'Alternance']" 
+              v-for="type in ['N\'importe quel contrat', 'CDI', 'CDD', 'Freelance', 'Stage', 'Alternance', 'Aucun']" 
               :key="type"
               class="flex items-center gap-4 p-4 rounded-xl border-2 border-border bg-background cursor-pointer hover:border-primary/50 transition-all"
               :class="{ 'border-primary bg-primary/10': contractType === type }"
@@ -288,6 +281,17 @@ const goBack = () => {
             <span v-else>{{ step === 3 ? 'Créer mon compte' : 'Continuer' }}</span>
             <ArrowRight v-if="!loading && step < 3" :size="20" class="group-hover:translate-x-1 transition-transform" />
             <CheckCircle v-else-if="!loading && step === 3" :size="20" />
+          </button>
+        </div>
+
+        <!-- Bouton pour passer l'étape 3 (optionnel) -->
+        <div v-if="step === 3" class="mt-3">
+          <button 
+            @click="handleRegister"
+            :disabled="loading"
+            class="w-full py-3 bg-background border border-border text-text-muted rounded-xl font-bold hover:bg-surface transition-all text-sm disabled:opacity-50"
+          >
+            Passer cette étape et créer mon compte
           </button>
         </div>
 

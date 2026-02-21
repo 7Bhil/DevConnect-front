@@ -22,10 +22,19 @@ const logout = () => {
   localStorage.removeItem('token')
 }
 
+const syncWithStorage = () => {
+  const user = JSON.parse(localStorage.getItem('user')) || null
+  const token = localStorage.getItem('token') || null
+  state.user = user
+  state.token = token
+  state.isAuthenticated = !!token
+}
+
 export const useAuth = () => {
   return {
-    state: readonly(state),
+    state,
     login,
-    logout
+    logout,
+    syncWithStorage
   }
 }

@@ -1,4 +1,5 @@
 <script setup>
+import { ref, computed } from 'vue'
 import { 
   LayoutDashboard, 
   Briefcase, 
@@ -8,14 +9,18 @@ import {
   Settings,
   HelpCircle,
   FolderOpen,
-  ShieldAlert
+  ShieldAlert,
+  Menu,
+  X,
+  ChevronLeft
 } from 'lucide-vue-next'
 import { useRoute } from 'vue-router'
 import { useAuth } from '../store/auth'
-import { computed } from 'vue'
 
 const route = useRoute()
 const auth = useAuth()
+const showMobileSidebar = ref(false)
+const showDesktopSidebar = ref(true) // Toujours visible par défaut sur desktop
 
 const navLinks = computed(() => {
   const baseLinks = [
@@ -45,14 +50,62 @@ const helpLinks = [
 </script>
 
 <template>
-  <aside class="w-64 bg-surface border-r border-border hidden lg:flex flex-col fixed h-full z-40 transition-colors duration-300">
+  <!-- Mobile Menu Button -->
+  <button 
+    @click="showMobileSidebar = !showMobileSidebar"
+    class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-surface border border-border rounded-xl shadow-lg"
+  >
+    <Menu :size="20" class="text-text" />
+  </button>
+
+  <!-- Desktop Sidebar Toggle Button -->
+  <button 
+    v-if="!showDesktopSidebar"
+    @click="showDesktopSidebar = true"
+    class="hidden lg:flex fixed top-4 left-4 z-50 p-2 bg-surface border border-border rounded-xl shadow-lg items-center gap-2"
+    title="Afficher la sidebar"
+  >
+    <Menu :size="20" class="text-text" />
+  </button>
+
+  <!-- Mobile Sidebar Overlay -->
+  <div 
+    v-if="showMobileSidebar"
+    @click="showMobileSidebar = false"
+    class="fixed inset-0 bg-black/50 z-40 lg:hidden"
+  ></div>
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-surface border-r border-border flex-col fixed h-full z-50 transition-colors duration-300"
+        :class="[
+          showMobileSidebar ? 'translate-x-0 flex' : '-translate-x-full hidden',
+          showDesktopSidebar ? 'lg:translate-x-0 lg:flex' : 'lg:-translate-x-full lg:hidden'
+        ]">
     <div class="p-6">
-      <router-link to="/" class="flex items-center gap-2 text-primary">
-        <div class="bg-primary text-white p-1.5 rounded-lg">
-          <FolderOpen :size="24" :stroke-width="3" />
+      <div class="flex items-center justify-between">
+        <router-link to="/" class="flex items-center gap-2 text-primary" @click="showMobileSidebar = false">
+          <div class="bg-primary text-white p-1.5 rounded-lg">
+            <FolderOpen :size="24" :stroke-width="3" />
+          </div>
+          <span class="text-xl font-black tracking-tight text-text">DevConnect</span>
+        </router-link>
+        <div class="flex items-center gap-2">
+          <!-- Bouton pour masquer/afficher sur desktop -->
+          <button 
+            @click="showDesktopSidebar = !showDesktopSidebar"
+            class="hidden lg:flex p-1 rounded-lg hover:bg-primary/5 transition-colors"
+            :title="showDesktopSidebar ? 'Masquer la sidebar' : 'Afficher la sidebar'"
+          >
+            <ChevronLeft :size="16" class="text-text-muted" />
+          </button>
+          <button 
+            @click="showMobileSidebar = false"
+            class="lg:hidden p-1 rounded-lg hover:bg-primary/5 transition-colors"
+          >
+            <X :size="20" class="text-text-muted" />
+          </button>
         </div>
-        <span class="text-xl font-black tracking-tight text-text">DevConnect</span>
-      </router-link>
+      </div>
     </div>
 
     <nav class="flex-1 px-4 py-4 space-y-1">
@@ -62,6 +115,7 @@ const helpLinks = [
         :to="link.to"
         class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group"
         :class="route.path === link.to ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-text-muted hover:bg-primary/5 hover:text-primary'"
+        @click="showMobileSidebar = false"
       >
         <component :is="link.icon" :size="20" />
         <span class="font-semibold text-sm">{{ link.label }}</span>
@@ -78,6 +132,7 @@ const helpLinks = [
         :key="link.to"
         :to="link.to"
         class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-text-muted hover:bg-primary/5 hover:text-primary"
+        @click="showMobileSidebar = false"
       >
         <component :is="link.icon" :size="20" />
         <span class="font-semibold text-sm">{{ link.label }}</span>

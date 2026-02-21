@@ -11,9 +11,9 @@ const isAuthPage = computed(() => ['Login', 'Register'].includes(route.name))
 <template>
   <div class="flex min-h-screen bg-background transition-colors duration-300">
     <Sidebar v-if="!isAuthPage" />
-    <div :class="['flex-1 flex flex-col min-h-screen', !isAuthPage ? 'lg:ml-64' : '']">
+    <div class="flex-1 flex flex-col min-h-screen">
       <Header v-if="!isAuthPage" />
-      <main :class="[!isAuthPage ? 'p-8' : '']">
+      <main :class="!isAuthPage ? 'p-4 sm:p-6 lg:p-8' : ''">
         <router-view v-slot="{ Component }">
           <transition 
             name="fade" 

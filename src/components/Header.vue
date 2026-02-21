@@ -1,15 +1,32 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, PlusCircle, Bell, User, LogOut, Sun, Moon, LogIn, X, MessageCircle, Briefcase } from 'lucide-vue-next'
+import { PlusCircle, Bell, User, LogOut, Sun, Moon, LogIn, X, MessageCircle, Briefcase } from 'lucide-vue-next'
 import { useAuth } from '../store/auth'
-import { globalSearch } from '../api'
 
 const router = useRouter()
 const auth = useAuth()
+const showProfileMenu = ref(false)
 const showNotifications = ref(false)
-const notificationCount = ref(0)
 const notifications = ref([])
+const notificationCount = ref(0)
+const isDark = ref(document.documentElement.classList.contains('dark'))
+
+// Watcher pour détecter les changements d'authentification
+watch(() => auth.state.isAuthenticated, (newValue) => {
+  console.log('Auth state changed:', newValue)
+}, { immediate: true })
+
+// Watcher pour les changements de route
+watch(() => router.currentRoute.value, () => {
+  auth.syncWithStorage()
+})
+
+// Synchroniser au montage du composant
+onMounted(() => {
+  auth.syncWithStorage()
+  loadNotifications()
+})
 
 // Load notifications from API
 const loadNotifications = async () => {
@@ -53,11 +70,6 @@ const loadNotifications = async () => {
 onMounted(() => {
   loadNotifications()
 })
-const isDark = ref(document.documentElement.classList.contains('dark'))
-const searchQuery = ref('')
-const showSearchResults = ref(false)
-const searchResults = ref({ projects: [], talents: [], jobs: [] })
-const searchLoading = ref(false)
 
 const toggleTheme = () => {
   isDark.value = !isDark.value
@@ -72,61 +84,7 @@ const toggleTheme = () => {
 
 const handleLogout = () => {
   auth.logout()
-  showProfileMenu.value = false
   router.push('/login')
-}
-
-// Search functionality
-const handleSearch = async () => {
-  if (!searchQuery.value.trim()) {
-    showSearchResults.value = false
-    return
-  }
-  
-  searchLoading.value = true
-  try {
-    searchResults.value = await globalSearch(searchQuery.value)
-    showSearchResults.value = true
-  } catch (error) {
-    console.error('Search error:', error)
-  } finally {
-    searchLoading.value = false
-  }
-}
-
-// Watch search query with debounce
-let searchTimeout
-watch(searchQuery, (newValue) => {
-  clearTimeout(searchTimeout)
-  if (newValue.trim().length >= 2) {
-    searchTimeout = setTimeout(handleSearch, 300)
-  } else {
-    showSearchResults.value = false
-  }
-})
-
-// Close search results when clicking outside
-const handleClickOutside = () => {
-  showSearchResults.value = false
-}
-
-// Navigate to search results
-const goToResults = (type, item) => {
-  showSearchResults.value = false
-  searchQuery.value = ''
-  
-  if (type === 'projects') {
-    router.push(`/projects/${item._id || item.id}`)
-  } else if (type === 'talents') {
-    router.push(`/talents`)
-  } else if (type === 'jobs') {
-    router.push(`/jobs`)
-  }
-}
-
-const goToAllResults = () => {
-  showSearchResults.value = false
-  router.push(`/search?q=${encodeURIComponent(searchQuery.value)}`)
 }
 
 // Notification functions
@@ -176,91 +134,12 @@ const addNotification = (notification) => {
 </script>
 
 <template>
-  <header class="h-16 bg-surface border-b border-border flex items-center justify-between px-8 sticky top-0 z-30 transition-colors duration-300">
-    <div class="flex-1 max-w-xl relative">
-      <div class="relative">
-        <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" :size="18" />
-        <input 
-          v-model="searchQuery"
-          @focus="handleSearch"
-          @clickoutside="handleClickOutside"
-          type="text" 
-          placeholder="Rechercher des projets, développeurs ou compétences..." 
-          class="w-full bg-background border border-border rounded-xl py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-text placeholder:text-text-muted transition-colors"
-        />
-        
-        <!-- Search Results Dropdown -->
-        <div 
-          v-if="showSearchResults && (searchResults.projects.length > 0 || searchResults.talents.length > 0 || searchResults.jobs.length > 0)"
-          class="absolute top-full mt-2 w-full bg-surface border border-border rounded-2xl shadow-2xl shadow-text/10 z-50 max-h-96 overflow-y-auto"
-        >
-          <div class="p-4">
-            <!-- Projects Section -->
-            <div v-if="searchResults.projects.length > 0" class="mb-4">
-              <h3 class="text-xs font-black text-text-muted uppercase tracking-widest mb-2">Projets</h3>
-              <div class="space-y-2">
-                <div 
-                  v-for="project in searchResults.projects.slice(0, 3)" 
-                  :key="project._id || project.id"
-                  @click="goToResults('projects', project)"
-                  class="p-3 rounded-xl bg-background hover:bg-surface cursor-pointer transition-colors"
-                >
-                  <h4 class="font-bold text-text text-sm">{{ project.title }}</h4>
-                  <p class="text-xs text-text-muted truncate">{{ project.description }}</p>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Talents Section -->
-            <div v-if="searchResults.talents.length > 0" class="mb-4">
-              <h3 class="text-xs font-black text-text-muted uppercase tracking-widest mb-2">Talents</h3>
-              <div class="space-y-2">
-                <div 
-                  v-for="talent in searchResults.talents.slice(0, 3)" 
-                  :key="talent._id || talent.id"
-                  @click="goToResults('talents', talent)"
-                  class="p-3 rounded-xl bg-background hover:bg-surface cursor-pointer transition-colors"
-                >
-                  <h4 class="font-bold text-text text-sm">{{ talent.name }}</h4>
-                  <p class="text-xs text-text-muted">{{ talent.skills?.slice(0, 3).join(', ') }}</p>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Jobs Section -->
-            <div v-if="searchResults.jobs.length > 0" class="mb-4">
-              <h3 class="text-xs font-black text-text-muted uppercase tracking-widest mb-2">Offres d'emploi</h3>
-              <div class="space-y-2">
-                <div 
-                  v-for="job in searchResults.jobs.slice(0, 3)" 
-                  :key="job._id || job.id"
-                  @click="goToResults('jobs', job)"
-                  class="p-3 rounded-xl bg-background hover:bg-surface cursor-pointer transition-colors"
-                >
-                  <h4 class="font-bold text-text text-sm">{{ job.title }}</h4>
-                  <p class="text-xs text-text-muted">{{ job.company }} • {{ job.location }}</p>
-                </div>
-              </div>
-            </div>
-            
-            <!-- View All Results -->
-            <button 
-              @click="goToAllResults"
-              class="w-full py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors"
-            >
-              Voir tous les résultats
-            </button>
-          </div>
-        </div>
-        
-        <!-- Loading Indicator -->
-        <div v-if="searchLoading" class="absolute right-3 top-1/2 -translate-y-1/2">
-          <div class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="flex items-center gap-4">
+  <header class="h-16 bg-surface border-b border-border flex items-center justify-between px-4 sm:px-8 sticky top-0 z-30 transition-colors duration-300">
+    <!-- Left side - Logo or empty space -->
+    <div class="flex-1"></div>
+    
+    <!-- Right side - Actions -->
+    <div class="flex items-center gap-2 sm:gap-4">
       <!-- Theme Toggle -->
       <button 
         @click="toggleTheme"
@@ -337,23 +216,24 @@ const addNotification = (notification) => {
       </div>
 
       <template v-if="auth.state.isAuthenticated">
-        <router-link to="/publish" class="hidden sm:flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold hover:scale-105 transition-all shadow-md shadow-primary/10">
-          <PlusCircle :size="18" />
-          Publier
+        <router-link to="/publish" class="hidden sm:flex items-center gap-2 bg-primary text-white px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold hover:scale-105 transition-all shadow-md shadow-primary/10">
+          <PlusCircle :size="16" class="sm:w-4 sm:h-4" />
+          <span class="hidden sm:inline">Publier</span>
         </router-link>
 
-        <div class="w-px h-6 bg-border mx-2"></div>
+        <div class="hidden sm:block w-px h-6 bg-border mx-2"></div>
 
         <div class="relative">
           <button 
             @click="showProfileMenu = !showProfileMenu"
-            class="flex items-center gap-3 p-1 rounded-full hover:bg-primary/5 transition-colors"
+            aria-label="Profile menu"
+            class="flex items-center gap-2 sm:gap-3 p-1 rounded-full hover:bg-primary/5 transition-colors"
           >
             <div class="text-right hidden sm:block">
               <p class="text-xs font-bold text-text leading-tight">{{ auth.state.user?.name }}</p>
               <p class="text-[10px] text-text-muted font-medium uppercase tracking-wider">{{ auth.state.user?.role }}</p>
             </div>
-            <img :src="auth.state.user?.avatar || 'https://ui-avatars.com/api/?name=U&background=7f9cf5&color=fff&size=200'" class="w-9 h-9 rounded-full border-2 border-primary/20" alt="Avatar" />
+            <img :src="auth.state.user?.avatar || 'https://ui-avatars.com/api/?name=U&background=7f9cf5&color=fff&size=200'" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-primary/20" alt="Avatar" />
           </button>
           
           <transition
@@ -364,7 +244,7 @@ const addNotification = (notification) => {
             leave-from-class="transform scale-100 opacity-100"
             leave-to-class="transform scale-95 opacity-0"
           >
-            <div v-if="showProfileMenu" class="absolute right-0 mt-2 w-48 bg-surface rounded-xl shadow-xl border border-border p-2 z-50">
+            <div v-if="showProfileMenu" class="profile-menu absolute right-0 mt-2 w-48 bg-surface rounded-xl shadow-xl border border-border p-2 z-50">
               <router-link to="/profile" @click="showProfileMenu = false" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-text hover:bg-primary/5 transition-colors">
                 <User :size="16" /> Mon Profil
               </router-link>
@@ -377,13 +257,14 @@ const addNotification = (notification) => {
       </template>
 
       <template v-else>
-        <div class="flex items-center gap-2">
-          <router-link to="/login" class="text-sm font-bold text-text-muted hover:text-primary px-4 py-2 transition-colors flex items-center gap-2">
-            <LogIn :size="18" />
-            Connexion
+        <div class="flex items-center gap-1 sm:gap-2">
+          <router-link to="/login" class="text-xs sm:text-sm font-bold text-text-muted hover:text-primary px-2 sm:px-4 py-2 transition-colors flex items-center gap-1 sm:gap-2">
+            <LogIn :size="14" class="sm:w-4 sm:h-4" />
+            <span class="hidden xs:inline">Connexion</span>
           </router-link>
-          <router-link to="/register" class="bg-primary text-white px-6 py-2.5 rounded-xl text-sm font-black hover:scale-105 transition-all shadow-lg shadow-primary/20">
-            S'inscrire
+          <router-link to="/register" class="bg-primary text-white px-3 sm:px-6 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-black hover:scale-105 transition-all shadow-lg shadow-primary/20">
+            <span class="hidden xs:inline">S'inscrire</span>
+            <span class="xs:hidden">+</span>
           </router-link>
         </div>
       </template>
