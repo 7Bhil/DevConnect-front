@@ -22,9 +22,6 @@ const linkedin = ref('')
 // Étape 3: Type de contrat (optionnel)
 const contractType = ref('')
 
-// Rôle final déterminé
-const finalRole = ref('')
-
 const handleNextStep = () => {
   if (step.value === 1) {
     if (!name.value || !email.value || !password.value) {
@@ -41,7 +38,6 @@ const handleNextStep = () => {
     step.value = 3
     error.value = ''
   } else if (step.value === 3) {
-    finalRole.value = 'developer'
     handleRegister()
   }
 }
@@ -57,7 +53,7 @@ const handleRegister = async () => {
         name: name.value, 
         email: email.value, 
         password: password.value, 
-        role: finalRole.value || 'developer',
+        role: role.value,
         country: country.value,
         whatsapp: whatsapp.value,
         linkedin: linkedin.value,
@@ -79,30 +75,6 @@ const handleRegister = async () => {
     error.value = 'Erreur de connexion au serveur'
   } finally {
     loading.value = false
-  }
-} 
-        email: email.value, 
-        password: password.value, 
-        role: finalRole.value,
-        contractType: contractType.value || null
-      })
-    })
-    
-    const data = await response.json()
-    if (!response.ok) throw new Error(data.message || 'Erreur lors de l\'inscription')
-    
-    router.push('/login')
-  } catch (err) {
-    error.value = err.message
-  } finally {
-    loading.value = false
-  }
-}
-
-const goBack = () => {
-  if (step.value > 1) {
-    step.value--
-    error.value = ''
   }
 }
 </script>
@@ -162,7 +134,7 @@ const goBack = () => {
                 v-model="email"
                 type="email" 
                 required
-                placeholder="jean@entreprise.com"
+                placeholder="jean@exemple.com"
                 class="w-full bg-background border-border rounded-xl py-4 pl-12 pr-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-text transition-all outline-none"
               />
             </div>
@@ -243,67 +215,71 @@ const goBack = () => {
           </div>
         </div>
 
-        <!-- Étape 3: Type de contrat -->
+        <!-- Étape 3: Type de contrat (optionnel) -->
         <div v-if="step === 3" class="space-y-4">
           <div class="text-center mb-6">
             <h2 class="text-xl font-black text-text mb-2">Type de contrat souhaité</h2>
-            <p class="text-sm text-text-muted">Quel type de contrat vous intéresse ?</p>
+            <p class="text-sm text-text-muted">Quel type de contrat vous intéresse ? (Optionnel)</p>
           </div>
           
-          <div class="space-y-3">
-            <label 
-              v-for="type in ['CDI', 'CDD', 'Freelance', 'Stage', 'Alternance']" 
+          <div class="grid grid-cols-2 gap-3">
+            <button 
+              v-for="type in ['CDI', 'CDD', 'Freelance', 'Stage', 'Alternance']"
               :key="type"
-              class="flex items-center gap-4 p-4 rounded-xl border-2 border-border bg-background cursor-pointer hover:border-primary/50 transition-all"
-              :class="{ 'border-primary bg-primary/10': contractType === type }"
+              @click="contractType = type"
+              :class="[
+                'p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2',
+                contractType === type 
+                  ? 'border-primary bg-primary/10 text-primary' 
+                  : 'border-border bg-background text-text hover:border-primary/50'
+              ]"
             >
-              <input 
-                v-model="contractType" 
-                :value="type" 
-                type="radio" 
-                class="w-5 h-5 text-primary focus:ring-primary/20"
-              />
-              <span class="font-bold text-text">{{ type }}</span>
-            </label>
+              <Briefcase :size="24" />
+              <span class="font-bold text-sm">{{ type }}</span>
+            </button>
           </div>
         </div>
 
         <!-- Navigation -->
-        <div class="flex gap-3 pt-4">
+        <div class="flex items-center justify-between pt-4">
           <button 
             v-if="step > 1"
-            @click="goBack"
-            :disabled="loading"
-            class="flex-1 py-4 bg-background border border-border text-text rounded-xl font-bold hover:bg-surface transition-all disabled:opacity-50"
+            @click="step--"
+            class="text-text-muted hover:text-primary transition-colors font-medium"
           >
             Retour
           </button>
           
+          <div class="flex-1"></div>
+          
           <button 
             @click="handleNextStep"
             :disabled="loading"
-            class="flex-1 bg-primary text-white py-4 rounded-xl font-black hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group disabled:opacity-70"
+            class="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-xl font-black hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Loader2 v-if="loading" class="animate-spin" :size="20" />
-            <span v-else>{{ step === 3 ? 'Créer mon compte' : 'Continuer' }}</span>
-            <ArrowRight v-if="!loading && step < 3" :size="20" class="group-hover:translate-x-1 transition-transform" />
-            <CheckCircle v-else-if="!loading && step === 3" :size="20" />
+            <span v-if="loading" class="animate-spin">
+              <Loader2 :size="18" />
+            </span>
+            <span v-else-if="step < 3">
+              Continuer
+              <ArrowRight :size="18" />
+            </span>
+            <span v-else>
+              S'inscrire
+              <CheckCircle :size="18" />
+            </span>
           </button>
-        </div>
-
-        <!-- Conditions uniquement à l'étape 1 -->
-        <div v-if="step === 1" class="flex items-start gap-3 px-1 pt-2">
-          <input type="checkbox" required class="mt-1 w-4 h-4 rounded border-border text-primary focus:ring-primary/20" />
-          <p class="text-[10px] text-text-muted font-bold leading-tight uppercase tracking-wider">
-            J'accepte les <a href="#" class="text-primary">conditions d'utilisation</a> et la <a href="#" class="text-primary">politique de confidentialité</a>.
-          </p>
         </div>
       </div>
 
-      <p class="text-center text-sm font-medium text-text-muted">
-        Déjà un compte ? 
-        <router-link to="/login" class="text-primary font-black hover:underline cursor-pointer">Se connecter</router-link>
-      </p>
+      <div class="text-center">
+        <p class="text-sm text-text-muted">
+          Déjà un compte ? 
+          <router-link to="/login" class="text-primary hover:text-primary/80 font-bold">
+            Se connecter
+          </router-link>
+        </p>
+      </div>
     </div>
   </div>
 </template>

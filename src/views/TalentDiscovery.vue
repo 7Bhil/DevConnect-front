@@ -1,30 +1,102 @@
 <script setup>
-import { onMounted, ref } from 'vue'
-import {
-  Users,
-  MapPin,
-  Terminal,
-  Search,
-  ChevronRight,
-  Filter,
-  CheckCircle2,
-  Mail,
-  User
-} from 'lucide-vue-next'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { Search, MapPin, Phone, Linkedin, User, CheckCircle2, ChevronDown, Filter } from 'lucide-vue-next'
 import { fetchTalents } from '../api'
+import { useAuth } from '../store/auth'
 
+const router = useRouter()
+const auth = useAuth()
 const talents = ref([])
 const loading = ref(true)
+const pagination = ref({})
 
-onMounted(async () => {
+// WhatsApp and LinkedIn functions
+const contactWhatsApp = (whatsapp) => {
+  if (!whatsapp) {
+    alert('Numéro WhatsApp non disponible')
+    return
+  }
+  
+  // Ouvrir WhatsApp
+  const whatsappUrl = `https://wa.me/${whatsapp.replace(/[^\d]/g, '')}`
+  window.open(whatsappUrl, '_blank')
+}
+
+const contactLinkedIn = (linkedin) => {
+  if (!linkedin) {
+    alert('Profil LinkedIn non disponible')
+    return
+  }
+  
+  // Ouvrir LinkedIn
+  window.open(linkedin, '_blank')
+}
+
+// Filter states
+const searchQuery = ref('')
+const selectedRole = ref('all')
+const selectedLocation = ref('all')
+const selectedAvailability = ref('all')
+const selectedContractType = ref('all')
+const selectedSkills = ref([])
+const currentPage = ref(1)
+
+// Build filters object
+const buildFilters = () => {
+  const filters = {}
+  
+  if (searchQuery.value.trim()) filters.search = searchQuery.value.trim()
+  if (selectedRole.value !== 'all') filters.role = selectedRole.value
+  if (selectedLocation.value !== 'all') filters.location = selectedLocation.value
+  if (selectedAvailability.value !== 'all') filters.availability = selectedAvailability.value === 'available'
+  if (selectedContractType.value !== 'all') filters.contractType = selectedContractType.value
+  if (selectedSkills.value.length > 0) filters.skills = selectedSkills.value.join(',')
+  if (currentPage.value > 1) filters.page = currentPage.value
+  
+  return filters
+}
+
+// Load talents with filters
+const loadTalents = async () => {
   try {
-    talents.value = await fetchTalents()
+    loading.value = true
+    const response = await fetchTalents(buildFilters())
+    talents.value = response.talents || []
+    pagination.value = response.pagination || {}
   } catch (error) {
     console.error(error)
+    talents.value = []
   } finally {
     loading.value = false
   }
-})
+}
+
+// Watch for filter changes
+watch([searchQuery, selectedRole, selectedLocation, selectedAvailability, selectedContractType, selectedSkills, currentPage], () => {
+  currentPage.value = 1 // Reset to page 1 when filters change
+  loadTalents()
+}, { deep: true })
+
+// Initial load
+onMounted(loadTalents)
+
+// Quick filter functions
+const applyQuickFilter = (skill) => {
+  if (!selectedSkills.value.includes(skill)) {
+    selectedSkills.value.push(skill)
+  }
+}
+
+const clearFilters = () => {
+  searchQuery.value = ''
+  selectedRole.value = 'all'
+  selectedLocation.value = 'all'
+  selectedAvailability.value = 'all'
+  selectedContractType.value = 'all'
+  selectedSkills.value = []
+  currentPage.value = 1
+}
 </script>
 
 <template>
@@ -40,9 +112,17 @@ onMounted(async () => {
          <div class="space-y-4">
             <p class="text-[10px] font-black text-text-muted uppercase tracking-widest">Rôle Principal</p>
             <div class="space-y-3">
-               <label v-for="(role, i) in ['Développeur', 'Candidat', 'Recruteur']" :key="role" class="flex items-center gap-3 cursor-pointer group">
-                  <input type="checkbox" :checked="i === 0" class="w-5 h-5 rounded border-border text-primary focus:ring-primary/20 bg-background" />
-                  <span class="text-sm font-bold text-text-muted group-hover:text-primary transition-colors">{{ role }}</span>
+               <label v-for="(role, i) in ['all', 'developer', 'recruiter']" :key="role" class="flex items-center gap-3 cursor-pointer group">
+                  <input 
+                    type="radio" 
+                    name="role" 
+                    :value="role"
+                    v-model="selectedRole"
+                    class="w-5 h-5 rounded border-border text-primary focus:ring-primary/20 bg-background" 
+                  />
+                  <span class="text-sm font-bold text-text-muted group-hover:text-primary transition-colors">
+                    {{ role === 'all' ? 'Tous les rôles' : role === 'developer' ? 'Développeur' : 'Recruteur' }}
+                  </span>
                </label>
             </div>
          </div>
@@ -50,9 +130,17 @@ onMounted(async () => {
          <div class="space-y-4">
             <p class="text-[10px] font-black text-text-muted uppercase tracking-widest">Type de Contrat</p>
             <div class="space-y-3">
-               <label v-for="(type, i) in ['Tous types', 'Temps plein', 'Freelance']" :key="type" class="flex items-center gap-3 cursor-pointer group">
-                  <input type="radio" name="contract" :checked="i === 0" class="w-5 h-5 border-border text-primary focus:ring-primary/20 bg-background" />
-                  <span class="text-sm font-bold text-text-muted group-hover:text-primary transition-colors">{{ type }}</span>
+               <label v-for="(type, i) in ['all', 'CDI', 'CDD', 'Freelance']" :key="type" class="flex items-center gap-3 cursor-pointer group">
+                  <input 
+                    type="radio" 
+                    name="contract" 
+                    :value="type"
+                    v-model="selectedContractType"
+                    class="w-5 h-5 rounded border-border text-primary focus:ring-primary/20 bg-background" 
+                  />
+                  <span class="text-sm font-bold text-text-muted group-hover:text-primary transition-colors">
+                    {{ type === 'all' ? 'Tous types' : type }}
+                  </span>
                </label>
             </div>
          </div>
@@ -60,8 +148,12 @@ onMounted(async () => {
          <div class="space-y-4">
             <p class="text-[10px] font-black text-text-muted uppercase tracking-widest">Tech Populaires</p>
             <div class="flex flex-wrap gap-2">
-               <span v-for="(tech, i) in ['REACT', 'NODE.JS', 'PYTHON', 'TYPESCRIPT', 'AWS', 'DOCKER']" :key="tech" class="px-2.5 py-1.5 rounded-md text-[9px] font-black cursor-pointer transition-all"
-                 :class="i === 0 ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-background border border-border text-text-muted hover:border-primary hover:text-primary'"
+               <span 
+                 v-for="tech in ['REACT', 'NODE.JS', 'PYTHON', 'TYPESCRIPT', 'AWS', 'DOCKER']" 
+                 :key="tech" 
+                 @click="applyQuickFilter(tech)"
+                 class="px-2.5 py-1.5 rounded-md text-[9px] font-black cursor-pointer transition-all"
+                 :class="selectedSkills.includes(tech) ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-background border border-border text-text-muted hover:border-primary hover:text-primary'"
                >
                  {{ tech }}
                </span>
@@ -85,7 +177,7 @@ onMounted(async () => {
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
               <h1 class="text-4xl font-black text-text tracking-tight mb-2">Découvrir les Talents</h1>
-              <p class="text-lg text-text-muted font-medium">{{ talents.length }} développeur{{ talents.length > 1 ? 's sont' : ' est' }} disponible{{ talents.length > 1 ? 's' : '' }} pour leur prochain défi.</p>
+              <p class="text-lg text-text-muted font-medium">{{ talents?.length || 0 }} développeur{{ (talents?.length || 0) > 1 ? 's sont' : ' est' }} disponible{{ (talents?.length || 0) > 1 ? 's' : '' }} pour leur prochain défi.</p>
             </div>
            <div class="flex items-center gap-3">
               <span class="text-xs font-bold text-text-muted uppercase tracking-widest">Trier par :</span>
@@ -99,7 +191,15 @@ onMounted(async () => {
           <div v-if="loading" class="grid grid-cols-1 gap-6">
              <div v-for="i in 3" :key="i" class="h-64 bg-surface rounded-3xl animate-pulse border border-border"></div>
           </div>
-          <div v-else v-for="talent in talents" :key="talent.id" class="bg-surface rounded-3xl p-8 border border-border shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all group relative overflow-hidden flex flex-col md:flex-row gap-8 relative overflow-hidden">
+          <div v-else-if="talents.length === 0" class="text-center py-20">
+            <div class="p-6 bg-surface rounded-full mb-4 border border-border mx-auto w-fit">
+              <User :size="48" class="text-text-muted opacity-50" />
+            </div>
+            <h4 class="text-lg font-black text-text mb-2">Aucun talent trouvé</h4>
+            <p class="text-sm text-text-muted max-w-xs mx-auto">Essayez d'ajuster vos filtres pour voir plus de résultats.</p>
+          </div>
+          <div v-else class="space-y-6">
+            <div v-for="talent in talents" :key="talent._id" class="bg-surface rounded-3xl p-8 border border-border shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all group relative overflow-hidden flex flex-col md:flex-row gap-8">
             <div class="shrink-0 relative">
               <div class="w-24 h-24 rounded-[2rem] overflow-hidden border-4 border-background ring-1 ring-border group-hover:scale-105 transition-transform duration-500 shadow-xl shadow-text/5">
                 <img :src="talent.avatar" class="w-full h-full object-cover" alt="" />
@@ -132,15 +232,24 @@ onMounted(async () => {
             </div>
 
             <div class="flex md:flex-col justify-end gap-3 shrink-0">
-              <button class="flex items-center justify-center gap-2 px-8 py-3 bg-primary text-white text-sm font-black rounded-2xl hover:scale-105 shadow-xl shadow-primary/20 transition-all active:scale-95">
-                <Mail :size="18" /> Contact
+              <button 
+                @click="contactWhatsApp(talent.whatsapp)"
+                :disabled="!talent.whatsapp"
+                class="flex items-center justify-center gap-2 px-8 py-3 bg-green-500 text-white text-sm font-black rounded-2xl hover:scale-105 shadow-xl shadow-green-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Phone :size="18" /> WhatsApp
               </button>
-              <button class="flex items-center justify-center gap-2 px-8 py-3 bg-background text-text text-sm font-black rounded-2xl border border-border hover:border-primary transition-all">
-                <User :size="18" /> Profil
+              <button 
+                @click="contactLinkedIn(talent.linkedin)"
+                :disabled="!talent.linkedin"
+                class="flex items-center justify-center gap-2 px-8 py-3 bg-blue-600 text-white text-sm font-black rounded-2xl hover:scale-105 shadow-xl shadow-blue-600/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Linkedin :size="18" /> LinkedIn
               </button>
             </div>
           </div>
         </div>
+          </div>
 
         <div class="text-center pt-10 pb-12">
           <button class="inline-flex items-center gap-3 px-10 py-4 bg-surface border border-border rounded-2xl font-black text-text hover:border-primary hover:text-primary transition-all shadow-sm">

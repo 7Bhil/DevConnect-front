@@ -1,42 +1,105 @@
 <script setup>
-import { onMounted, ref } from 'vue'
-import { 
-  Search, 
-  Send, 
-  Phone, 
-  Video, 
-  Info, 
-  MoreVertical, 
-  Plus, 
-  Code, 
-  Smile,
-  Paperclip,
-  Check,
-  ChevronLeft
-} from 'lucide-vue-next'
-import { fetchMessages } from '../api'
+import { ref, onMounted, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
+import { ChevronLeft, Send, Smile, Paperclip, Phone, Video, MoreVertical, Info, Plus } from 'lucide-vue-next'
+import { fetchMessages, fetchConversation, sendMessage } from '../api'
+import { useAuth } from '../store/auth'
 
+const route = useRoute()
 const conversations = ref([])
-const activeId = ref('c2')
+const activeId = ref(null)
+const messages = ref([])
 const loading = ref(true)
+const sendingMessage = ref(false)
+
+const activeChat = ref(null)
+const message = ref('')
+const messagesContainer = ref(null)
+
+const setActiveChat = async (conv) => {
+  activeChat.value = conv
+  activeId.value = conv._id
+  
+  try {
+    messages.value = await fetchConversation(conv._id)
+    await nextTick()
+    scrollToBottom()
+  } catch (error) {
+    console.error('Error loading conversation:', error)
+  }
+}
+
+const scrollToBottom = () => {
+  if (messagesContainer.value) {
+    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  }
+}
+
+const handleSendMessage = async () => {
+  if (!message.value.trim() || !activeChat.value || sendingMessage.value) return
+  
+  sendingMessage.value = true
+  const tempMessage = message.value
+  message.value = ''
+  
+  try {
+    const newMessage = await sendMessage(
+      activeChat.value._id,
+      tempMessage
+    )
+    messages.value.push(newMessage)
+    await nextTick()
+    scrollToBottom()
+  } catch (error) {
+    console.error('Error sending message:', error)
+    message.value = tempMessage // Restore message on error
+  } finally {
+    sendingMessage.value = false
+  }
+}
+
+const formatTime = (date) => {
+  const messageDate = new Date(date)
+  const now = new Date()
+  const diff = now - messageDate
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  
+  if (minutes < 1) return 'À l\'instant'
+  if (minutes < 60) return `${minutes}m`
+  if (hours < 24) return `${hours}h`
+  if (days < 7) return `${days}j`
+  return messageDate.toLocaleDateString('fr-FR')
+}
+
+const formatLastTimestamp = (date) => {
+  const messageDate = new Date(date)
+  const now = new Date()
+  const diff = now - messageDate
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  
+  if (minutes < 1) return 'À l\'instant'
+  if (minutes < 60) return `Il y a ${minutes} min`
+  if (hours < 24) return `Il y a ${hours}h`
+  if (days < 7) return `Il y a ${days}j`
+  return messageDate.toLocaleDateString('fr-FR')
+}
 
 onMounted(async () => {
   try {
     conversations.value = await fetchMessages()
+    if (conversations.value.length > 0) {
+      await setActiveChat(conversations.value[0])
+    }
   } catch (error) {
-    console.error(error)
+    console.error('Error loading conversations:', error)
   } finally {
     loading.value = false
   }
 })
-
-const activeChat = ref(null) // Initialize as null, will be set in onMounted
-const message = ref('')
-
-const setActiveChat = (conv) => {
-  activeChat.value = conv
-  activeId.value = conv.id // Update activeId when chat changes
-}
 </script>
 
 <template>
@@ -67,10 +130,10 @@ const setActiveChat = (conv) => {
         <button
           v-else
           v-for="conv in conversations"
-          :key="conv.id"
+          :key="conv._id"
           @click="setActiveChat(conv)"
           class="w-full flex items-center gap-3 p-4 transition-all border-l-4"
-          :class="activeChat && activeChat.id === conv.id
+          :class="activeChat && activeChat._id === conv._id
             ? 'bg-primary/5 border-primary'
             : 'bg-transparent border-transparent hover:bg-primary/5'"
         >
@@ -81,7 +144,7 @@ const setActiveChat = (conv) => {
           <div class="flex-1 text-left overflow-hidden">
             <div class="flex items-center justify-between mb-1">
               <span class="text-sm font-bold text-text truncate">{{ conv.participant.name }}</span>
-              <span class="text-[10px] text-text-muted whitespace-nowrap">{{ conv.lastTimestamp }}</span>
+              <span class="text-xs text-text-muted whitespace-nowrap">{{ formatLastTimestamp(conv.lastTimestamp) }}</span>
             </div>
             <p class="text-xs truncate transition-colors" :class="conv.unread ? 'font-bold text-text' : 'text-text-muted'">
               {{ conv.lastMessage }}
@@ -116,43 +179,80 @@ const setActiveChat = (conv) => {
         </div>
       </header>
 
-      <!-- Message Thread -->
-      <div class="flex-1 overflow-y-auto p-8 space-y-6 no-scrollbar">
-         <div class="flex justify-center">
-           <span class="text-[10px] font-bold text-text-muted uppercase tracking-widest bg-surface border border-border px-3 py-1 rounded-full shadow-sm">Aujourd'hui</span>
-         </div>
-
-         <div class="flex-1 flex flex-col items-center justify-center text-text-muted py-20 px-8 text-center">
+        <div class="flex-1 overflow-y-auto p-8 space-y-6 no-scrollbar" ref="messagesContainer">
+          <div v-if="messages.length === 0" class="flex-1 flex flex-col items-center justify-center text-text-muted py-20 px-8 text-center">
             <div class="p-6 bg-surface rounded-full mb-4 border border-border">
-              <MessageCircle :size="48" class="opacity-20" />
+              <Send :size="48" class="opacity-20" />
             </div>
             <h4 class="text-lg font-black text-text mb-2">Aucun message ici</h4>
-            <p class="text-sm max-w-xs">Envoyez le premier message pour entamer la discussion avec {{ activeChat.participant.name }}.</p>
-         </div>
-      </div>
+            <p class="text-sm max-w-xs">Envoyez le premier message pour entamer la discussion avec {{ activeChat?.participant?.name || '' }}.</p>
+          </div>
+          
+          <div v-else class="space-y-4">
+            <div 
+              v-for="msg in messages" 
+              :key="msg._id"
+              class="flex items-start gap-3"
+              :class="{ 'flex-row-reverse': msg.sender._id === auth.state.user?._id }"
+            >
+              <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                <img 
+                  :src="msg.sender.avatar || '/default-avatar.png'" 
+                  :alt="msg.sender.name"
+                  class="w-full h-full object-cover"
+                />
+              </div>
+              
+              <div 
+                class="max-w-xs lg:max-w-md"
+                :class="{ 'items-end': msg.sender._id === auth.state.user?._id }"
+              >
+                <div 
+                  class="px-4 py-2 rounded-2xl text-sm"
+                  :class="{
+                    'bg-primary text-white rounded-br-sm': msg.sender._id === auth.state.user?._id,
+                    'bg-surface border border-border text-text rounded-bl-sm': msg.sender._id !== auth.state.user?._id
+                  }"
+                >
+                  {{ msg.content }}
+                </div>
+                <p class="text-xs text-text-muted mt-1 px-1" :class="{ 'text-right': msg.sender._id === auth.state.user?._id }">
+                  {{ formatTime(msg.createdAt) }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
 
       <!-- Input Area -->
       <div class="p-6 bg-surface border-t border-border transition-colors duration-300">
          <div class="max-w-4xl mx-auto flex items-end gap-4">
-            <div class="flex items-center gap-1 mb-1">
-               <button class="p-2 text-text-muted hover:text-primary transition-colors"><Plus :size="22" /></button>
-               <button class="p-2 text-text-muted hover:text-primary transition-colors"><Code :size="22" /></button>
-            </div>
+            <button class="p-2 text-text-muted hover:text-primary transition-colors">
+              <Paperclip :size="20" />
+            </button>
+            
             <div class="flex-1 relative">
               <textarea 
                 v-model="message"
-                class="w-full bg-background border border-border rounded-2xl py-3 pl-4 pr-12 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-text resize-none no-scrollbar h-12 transition-all"
+                @keydown.enter.prevent="handleSendMessage"
+                :disabled="!activeChat || sendingMessage"
+                class="w-full bg-background border border-border rounded-2xl py-3 pl-4 pr-12 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-text resize-none no-scrollbar transition-all disabled:opacity-50"
                 placeholder="Tapez votre message..."
                 rows="1"
               ></textarea>
-              <button class="absolute right-3 top-3 text-text-muted hover:text-primary"><Smile :size="20" /></button>
+              <button 
+                @click="handleSendMessage"
+                :disabled="!message.trim() || !activeChat || sendingMessage"
+                class="absolute right-3 top-3 text-text-muted hover:text-primary disabled:opacity-50 transition-colors"
+              >
+                <Send :size="20" />
+              </button>
             </div>
-            <button 
-              class="bg-primary text-white w-12 h-12 rounded-2xl flex items-center justify-center hover:scale-105 transition-all shadow-lg shadow-primary/20 active:scale-95 shrink-0"
-            >
-              <Send :size="20" />
+            
+            <button class="p-2 text-text-muted hover:text-primary transition-colors">
+              <Smile :size="20" />
             </button>
-         </div>
+          </div>
          <div class="max-w-4xl mx-auto flex justify-center gap-6 mt-3 text-[10px] font-bold text-text-muted uppercase tracking-widest">
            <span class="flex items-center gap-1">Entrée pour envoyer</span>
            <span class="flex items-center gap-1">Maj + Entrée pour retour ligne</span>

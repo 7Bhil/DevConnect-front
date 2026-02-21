@@ -31,10 +31,9 @@ const routes = [
     component: () => import('./views/TalentDiscovery.vue')
   },
   {
-    path: '/messages',
-    name: 'Messages',
-    component: () => import('./views/Messages.vue'),
-    meta: { requiresAuth: true }
+    path: '/talent/:id',
+    name: 'TalentProfile',
+    component: () => import('./views/TalentProfile.vue')
   },
   {
     path: '/profile',
@@ -47,6 +46,17 @@ const routes = [
     name: 'SuperAdmin',
     component: () => import('./views/SuperAdmin.vue'),
     meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/publish',
+    name: 'Publish',
+    component: () => import('./views/Publish.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/projects/:id',
+    name: 'ProjectDetail',
+    component: () => import('./views/ProjectDetail.vue')
   }
 ]
 

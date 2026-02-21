@@ -9,7 +9,7 @@ export const MOCK_JOBS = [
     description: 'Nous recherchons un ingénieur Frontend visionnaire pour rejoindre notre équipe Core UI. Vous serez responsable de la création d\'expériences web haute performance.',
     tags: ['React', 'TypeScript', 'Tailwind'],
     postedAt: 'Il y a 2 heures',
-    logo: 'https://picsum.photos/seed/vercel/100/100',
+    logo: 'https://ui-avatars.com/api/?name=V&background=7f9cf5&color=fff&size=100',
   },
   {
     id: '2',
@@ -21,7 +21,7 @@ export const MOCK_JOBS = [
     description: 'Dirigez la migration d\'infrastructure pour une grande fintech européenne. Une expertise en Kubernetes, Terraform et stratégie multi-cloud est essentielle.',
     tags: ['Kubernetes', 'AWS', 'Terraform'],
     postedAt: 'Hier',
-    logo: 'https://picsum.photos/seed/cloud/100/100',
+    logo: 'https://ui-avatars.com/api/?name=C&background=96f2d7&color=fff&size=100',
   },
   {
     id: '3',
@@ -33,7 +33,7 @@ export const MOCK_JOBS = [
     description: 'Rejoignez une startup IA en forte croissance spécialisée dans le traitement du langage naturel. Vous construirez des APIs robustes traitant des millions de requêtes.',
     tags: ['Python', 'Django', 'Redis'],
     postedAt: 'Il y a 3 jours',
-    logo: 'https://picsum.photos/seed/neural/100/100',
+    logo: 'https://ui-avatars.com/api/?name=N&background=ffd93d&color=fff&size=100',
   }
 ];
 
@@ -45,7 +45,7 @@ export const MOCK_TALENTS = [
     location: 'Nantes, France',
     bio: 'Passionnée par la création d\'applications web évolutives et le mentorat de développeurs juniors. Spécialisée en architecture cloud.',
     skills: ['React', 'Node.js', 'GraphQL', 'AWS Lambda'],
-    avatar: 'https://picsum.photos/seed/sophie/200/200',
+    avatar: 'https://ui-avatars.com/api/?name=SL&background=45b7d1&color=fff&size=200',
     isAvailable: true,
     projectsCount: 12,
     followersCount: '1.2k',
@@ -57,7 +57,7 @@ export const MOCK_TALENTS = [
     location: 'Paris, France',
     bio: 'Enthousiaste de l\'automatisation avec plus de 8 ans d\'expérience dans les pipelines CI/CD et la conteneurisation avec Kubernetes.',
     skills: ['Kubernetes', 'Terraform', 'Azure', 'Go'],
-    avatar: 'https://picsum.photos/seed/alex/200/200',
+    avatar: 'https://ui-avatars.com/api/?name=AR&background=7f9cf5&color=fff&size=200',
     isAvailable: false,
     projectsCount: 8,
     followersCount: '850',
@@ -69,7 +69,7 @@ export const MOCK_TALENTS = [
     location: 'Bordeaux, France',
     bio: 'Spécialiste mobile dédié au développement Flutter et iOS Natif. Expert dans la création d\'animations fluides.',
     skills: ['Flutter', 'Swift', 'Dart', 'Firebase'],
-    avatar: 'https://picsum.photos/seed/thomas/200/200',
+    avatar: 'https://ui-avatars.com/api/?name=TB&background=96f2d7&color=fff&size=200',
     isAvailable: true,
     projectsCount: 15,
     followersCount: '2.1k',
