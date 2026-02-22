@@ -4,7 +4,6 @@ import {
   LayoutDashboard, 
   Briefcase, 
   Users, 
-  MessageSquare, 
   User,
   Settings,
   HelpCircle,
@@ -31,7 +30,7 @@ const navLinks = computed(() => {
   
   if (auth.state.isAuthenticated) {
     baseLinks.push(
-      { to: '/messages', icon: MessageSquare, label: 'Messagerie' },
+      { to: '/projects', icon: FolderOpen, label: 'Mes Projets' },
       { to: '/profile', icon: User, label: 'Mon Profil' }
     )
   }

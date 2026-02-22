@@ -57,54 +57,6 @@ export const fetchTalents = async (filters = {}) => {
   return response.json();
 };
 
-export const fetchMessages = async () => {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_BASE_URL}/messages`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
-  if (!response.ok) throw new Error('Failed to fetch messages');
-  return response.json();
-};
-
-export const fetchConversation = async (userId) => {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_BASE_URL}/messages/${userId}`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
-  if (!response.ok) throw new Error('Failed to fetch conversation');
-  return response.json();
-};
-
-export const sendMessage = async (receiver, content, messageType = 'text', relatedId = null) => {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_BASE_URL}/messages`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ receiver, content, messageType, relatedId })
-  });
-  if (!response.ok) throw new Error('Failed to send message');
-  return response.json();
-};
-
-export const markMessageAsRead = async (messageId) => {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_BASE_URL}/messages/${messageId}/read`, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
-  if (!response.ok) throw new Error('Failed to mark message as read');
-  return response.json();
-};
-
 export const applyToJob = async (jobData) => {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_BASE_URL}/applications`, {
@@ -207,6 +159,30 @@ export const fetchProjectById = async (id) => {
   return response.json();
 };
 
+export const deleteProject = async (id, token) => {
+  const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) throw new Error('Failed to delete project');
+  return response.json();
+};
+
+export const updateProject = async (id, projectData, token) => {
+  const response = await fetch(`${API_BASE_URL}/projects/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(projectData)
+  });
+  if (!response.ok) throw new Error('Failed to update project');
+  return response.json();
+};
+
 export const createJob = async (jobData, token) => {
   const response = await fetch(`${API_BASE_URL}/jobs`, {
     method: 'POST',
@@ -230,5 +206,78 @@ export const updateProfile = async (profileData, token) => {
     body: JSON.stringify(profileData)
   });
   if (!response.ok) throw new Error('Failed to update profile');
+  return response.json();
+};
+
+// Notifications API
+export const fetchNotifications = async (page = 1, limit = 20) => {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE_URL}/notifications?page=${page}&limit=${limit}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) throw new Error('Failed to fetch notifications');
+  return response.json();
+};
+
+export const markNotificationAsRead = async (notificationId) => {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) throw new Error('Failed to mark notification as read');
+  return response.json();
+};
+
+export const markAllNotificationsAsRead = async () => {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) throw new Error('Failed to mark all notifications as read');
+  return response.json();
+};
+
+export const deleteNotification = async (notificationId) => {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) throw new Error('Failed to delete notification');
+  return response.json();
+};
+
+export const getUnreadNotificationsCount = async () => {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE_URL}/notifications/unread-count`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!response.ok) throw new Error('Failed to fetch unread count');
+  return response.json();
+};
+
+export const createNotification = async (notificationData) => {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_BASE_URL}/notifications`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(notificationData)
+  });
+  if (!response.ok) throw new Error('Failed to create notification');
   return response.json();
 };

@@ -12,6 +12,8 @@ const pagination = ref({})
 // Application modal state
 const showApplicationModal = ref(false)
 const selectedJob = ref(null)
+const showContactChoice = ref(false)
+const selectedContactMethod = ref('')
 const applicationForm = ref({
   coverLetter: '',
   resume: '',
@@ -92,6 +94,8 @@ const openApplicationModal = (job) => {
 // Close application modal
 const closeApplicationModal = () => {
   showApplicationModal.value = false
+  showContactChoice.value = false
+  selectedContactMethod.value = ''
   selectedJob.value = null
   applicationForm.value = {
     coverLetter: '',
@@ -109,14 +113,26 @@ const submitApplication = async () => {
     return
   }
   
+  // Afficher le choix de contact
+  showContactChoice.value = true
+}
+
+// Continue with selected contact method
+const continueWithContact = async () => {
+  if (!selectedContactMethod.value) {
+    alert('Veuillez choisir une méthode de contact')
+    return
+  }
+  
   submittingApplication.value = true
   try {
     await applyToJob({
       jobId: selectedJob.value._id,
+      contactMethod: selectedContactMethod.value,
       ...applicationForm.value
     })
     
-    alert('Candidature envoyée avec succès !')
+    alert(`Candidature envoyée avec succès via ${selectedContactMethod.value} !`)
     closeApplicationModal()
   } catch (error) {
     console.error('Application error:', error)
@@ -534,8 +550,73 @@ const clearFilters = () => {
             class="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50"
           >
             <div v-if="submittingApplication" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            <span v-else>Envoyer ma candidature</span>
+            <span v-else>Continuer</span>
           </button>
+        </div>
+        
+        <!-- Contact Choice Modal -->
+        <div v-if="showContactChoice" class="p-6 border-t border-border bg-primary/5">
+          <h4 class="text-lg font-black text-text mb-4">Choisissez votre méthode de contact</h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <button 
+              @click="selectedContactMethod = 'whatsapp'"
+              :class="selectedContactMethod === 'whatsapp' ? 'ring-2 ring-primary bg-primary/10' : 'bg-background border border-border'"
+              class="p-4 rounded-xl text-left hover:border-primary transition-all"
+            >
+              <div class="flex items-center gap-3 mb-2">
+                <div class="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center">
+                  <span class="text-white font-bold">W</span>
+                </div>
+                <span class="font-bold text-text">WhatsApp</span>
+              </div>
+              <p class="text-xs text-text-muted">Contact direct via WhatsApp</p>
+            </button>
+            
+            <button 
+              @click="selectedContactMethod = 'email'"
+              :class="selectedContactMethod === 'email' ? 'ring-2 ring-primary bg-primary/10' : 'bg-background border border-border'"
+              class="p-4 rounded-xl text-left hover:border-primary transition-all"
+            >
+              <div class="flex items-center gap-3 mb-2">
+                <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <span class="text-white font-bold">@</span>
+                </div>
+                <span class="font-bold text-text">Email</span>
+              </div>
+              <p class="text-xs text-text-muted">Contact par email professionnel</p>
+            </button>
+            
+            <button 
+              @click="selectedContactMethod = 'linkedin'"
+              :class="selectedContactMethod === 'linkedin' ? 'ring-2 ring-primary bg-primary/10' : 'bg-background border border-border'"
+              class="p-4 rounded-xl text-left hover:border-primary transition-all"
+            >
+              <div class="flex items-center gap-3 mb-2">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <span class="text-white font-bold">in</span>
+                </div>
+                <span class="font-bold text-text">LinkedIn</span>
+              </div>
+              <p class="text-xs text-text-muted">Contact via LinkedIn</p>
+            </button>
+          </div>
+          
+          <div class="flex justify-end gap-4">
+            <button 
+              @click="showContactChoice = false; selectedContactMethod = ''"
+              class="px-6 py-3 bg-background border border-border text-text rounded-xl font-bold hover:bg-surface transition-colors"
+            >
+              Retour
+            </button>
+            <button 
+              @click="continueWithContact"
+              :disabled="submittingApplication || !selectedContactMethod"
+              class="px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <div v-if="submittingApplication" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span v-else>Envoyer ma candidature</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

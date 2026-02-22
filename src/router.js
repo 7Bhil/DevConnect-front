@@ -57,6 +57,23 @@ const routes = [
     path: '/projects/:id',
     name: 'ProjectDetail',
     component: () => import('./views/ProjectDetail.vue')
+  },
+  {
+    path: '/projects',
+    name: 'Projects',
+    component: () => import('./views/Projects.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('./views/Settings.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/support',
+    name: 'Support',
+    component: () => import('./views/Support.vue')
   }
 ]
 

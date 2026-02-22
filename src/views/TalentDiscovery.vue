@@ -110,13 +110,12 @@ const clearFilters = () => {
     ></div>
     
     <!-- Sidebar Filters -->
-    <aside :class="[
-      'w-80 bg-surface border-r border-border p-6 lg:p-8 overflow-y-auto no-scrollbar transition-colors duration-300 fixed lg:relative z-50',
-      'translate-x-0': showSidebar,
-      '-translate-x-full': !showSidebar,
-      'lg:block': true,
-      'hidden': !showSidebar
-    ]">
+    <aside class="w-80 bg-surface border-r border-border p-6 lg:p-8 overflow-y-auto no-scrollbar transition-colors duration-300 fixed lg:relative z-50"
+          :class="[
+            showSidebar ? 'translate-x-0' : '-translate-x-full',
+            showSidebar ? 'block' : 'hidden',
+            'lg:block'
+          ]">
       <div class="flex items-center justify-between mb-6 lg:mb-8">
          <div class="flex items-center gap-2 text-primary">
            <Filter :size="20" />
@@ -273,9 +272,12 @@ const clearFilters = () => {
           <div v-else class="space-y-4 sm:space-y-6">
             <div v-for="talent in talents" :key="talent._id" class="bg-surface rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border border-border shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all group relative overflow-hidden flex flex-col lg:flex-row gap-4 lg:gap-8">
             <div class="shrink-0 relative">
-              <div class="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-xl sm:rounded-[2rem] overflow-hidden border-4 border-background ring-1 ring-border group-hover:scale-105 transition-transform duration-500 shadow-xl shadow-text/5">
+              <router-link 
+                :to="`/talent/${talent._id}`"
+                class="block w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-xl sm:rounded-[2rem] overflow-hidden border-4 border-background ring-1 ring-border group-hover:scale-105 transition-transform duration-500 shadow-xl shadow-text/5"
+              >
                 <img :src="talent.avatar" class="w-full h-full object-cover" alt="" />
-              </div>
+              </router-link>
               <div v-if="talent.isAvailable" class="absolute -bottom-1 -right-1 bg-emerald-500 w-6 h-6 rounded-full border-4 border-surface flex items-center justify-center" title="Disponible">
                  <CheckCircle2 :size="12" class="text-white" />
               </div>
@@ -284,7 +286,12 @@ const clearFilters = () => {
             <div class="flex-1 space-y-3 sm:space-y-4">
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                 <div>
-                   <h3 class="text-lg sm:text-xl lg:text-2xl font-black text-text group-hover:text-primary transition-colors">{{ talent.name }}</h3>
+                   <router-link 
+                     :to="`/talent/${talent._id}`"
+                     class="block group-hover:text-primary transition-colors"
+                   >
+                     <h3 class="text-lg sm:text-xl lg:text-2xl font-black text-text group-hover:text-primary transition-colors">{{ talent.name }}</h3>
+                   </router-link>
                    <p class="text-primary font-bold text-sm tracking-tight">{{ talent.role }}</p>
                 </div>
                 <div class="flex items-center gap-2 text-text-muted text-xs font-bold uppercase tracking-widest">

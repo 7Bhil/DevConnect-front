@@ -74,7 +74,17 @@ onMounted(async () => {
             </div>
             <div class="p-4">
               <h4 class="font-bold text-text mb-1">{{ project.title }}</h4>
-              <p class="text-xs text-text-muted mb-3">Par {{ project.author?.name || 'Inconnu' }}</p>
+              <p class="text-xs text-text-muted mb-3">
+                Par 
+                <router-link 
+                  v-if="project.author?._id"
+                  :to="`/talent/${project.author._id}`"
+                  class="text-primary hover:underline font-medium"
+                >
+                  {{ project.author.name }}
+                </router-link>
+                <span v-else>Inconnu</span>
+              </p>
               <div class="flex gap-2">
                 <span v-for="tag in project.tags" :key="tag" class="text-[10px] font-bold px-2 py-1 rounded-md bg-primary/10 text-primary">
                   {{ tag }}

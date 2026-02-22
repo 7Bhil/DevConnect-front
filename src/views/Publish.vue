@@ -1,6 +1,6 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { 
   Plus, 
   Image as ImageIcon, 
@@ -14,11 +14,16 @@ import {
   Rocket
 } from 'lucide-vue-next'
 
-import { createProject } from '../api'
+import { createProject, updateProject, fetchProjectById } from '../api'
 import { useAuth } from '../store/auth'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuth()
+
+// Mode édition ?
+const isEditMode = ref(false)
+const projectId = ref(null)
 
 const form = ref({
   title: '',
@@ -30,6 +35,31 @@ const form = ref({
 })
 
 const isSubmitting = ref(false)
+
+// Charger les données du projet si mode édition
+onMounted(async () => {
+  const editId = route.query.edit
+  if (editId) {
+    isEditMode.value = true
+    projectId.value = editId
+    try {
+      const project = await fetchProjectById(editId)
+      // Pré-remplir le formulaire
+      form.value = {
+        title: project.title,
+        description: project.description,
+        tags: project.tags ? project.tags.join(', ') : '',
+        githubUrl: project.githubUrl || '',
+        demoUrl: project.demoUrl || '',
+        image: null
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement du projet:', error)
+      alert('Erreur lors du chargement du projet')
+      router.push('/projects')
+    }
+  }
+})
 
 const handleImageUpload = (event) => {
   const file = event.target.files[0]
@@ -47,11 +77,19 @@ const handleSubmit = async () => {
   
   isSubmitting.value = true
   try {
-    await createProject(form.value, auth.state.token)
-    router.push('/')
+    if (isEditMode.value) {
+      // Mode édition : mettre à jour le projet
+      await updateProject(projectId.value, form.value, auth.state.token)
+      alert('Projet mis à jour avec succès!')
+    } else {
+      // Mode création : créer un nouveau projet
+      await createProject(form.value, auth.state.token)
+      alert('Projet publié avec succès!')
+    }
+    router.push('/projects')
   } catch (error) {
     console.error('Erreur lors de la publication:', error)
-    alert('Erreur lors de la publication du projet')
+    alert(`Erreur lors de ${isEditMode.value ? 'la mise à jour' : 'la publication'} du projet`)
   } finally {
     isSubmitting.value = false
   }
@@ -65,8 +103,12 @@ const handleSubmit = async () => {
         <Rocket :size="32" />
       </div>
       <div>
-        <h1 class="text-4xl font-black text-text tracking-tight">Publier un Projet</h1>
-        <p class="text-text-muted font-medium">Partagez votre travail avec la communauté DevConnect.</p>
+        <h1 class="text-4xl font-black text-text tracking-tight">
+          {{ isEditMode ? 'Modifier un Projet' : 'Publier un Projet' }}
+        </h1>
+        <p class="text-text-muted font-medium">
+          {{ isEditMode ? 'Modifiez les informations de votre projet.' : 'Partagez votre travail avec la communauté DevConnect.' }}
+        </p>
       </div>
     </div>
 
@@ -191,7 +233,9 @@ const handleSubmit = async () => {
           :disabled="isSubmitting"
           class="w-full bg-primary text-white py-4 rounded-2xl font-black text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
         >
-          <span v-if="!isSubmitting">Lancer le Projet</span>
+          <span v-if="!isSubmitting">
+            {{ isEditMode ? 'Mettre à jour le Projet' : 'Lancer le Projet' }}
+          </span>
           <span v-else class="flex items-center gap-2">
             <span class="w-2 h-2 bg-white rounded-full animate-bounce"></span>
             <span class="w-2 h-2 bg-white rounded-full animate-bounce [animation-delay:0.2s]"></span>

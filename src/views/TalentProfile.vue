@@ -1,8 +1,8 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { MapPin, Mail, User, Calendar, Briefcase, Award, Github, Linkedin, Twitter, Globe, ArrowLeft, MessageCircle } from 'lucide-vue-next'
-import { getUserById } from '../api'
+import { MapPin, Mail, User, Calendar, Briefcase, Award, Github, Linkedin, Twitter, Globe, ArrowLeft } from 'lucide-vue-next'
+import { getUserById, fetchProjects } from '../api'
 import { useAuth } from '../store/auth'
 
 const route = useRoute()
@@ -12,6 +12,8 @@ const auth = useAuth()
 const talent = ref(null)
 const loading = ref(true)
 const error = ref('')
+const projects = ref([])
+const projectsLoading = ref(false)
 
 const talentId = computed(() => route.params.id)
 
@@ -21,6 +23,9 @@ const loadTalent = async () => {
     error.value = ''
     const response = await getUserById(talentId.value)
     talent.value = response.user
+    
+    // Charger les projets du talent
+    await loadTalentProjects()
   } catch (err) {
     console.error('Error loading talent:', err)
     error.value = 'Talent non trouvé'
@@ -29,18 +34,25 @@ const loadTalent = async () => {
   }
 }
 
-const goBack = () => {
-  router.go(-1)
+const loadTalentProjects = async () => {
+  if (!talent.value) return
+  
+  try {
+    projectsLoading.value = true
+    const allProjects = await fetchProjects()
+    // Filtrer les projets de ce talent
+    projects.value = allProjects.filter(project => 
+      project.author && project.author._id === talent.value._id
+    )
+  } catch (err) {
+    console.error('Error loading talent projects:', err)
+  } finally {
+    projectsLoading.value = false
+  }
 }
 
-const contactTalent = () => {
-  if (!auth.state.isAuthenticated) {
-    alert('Vous devez être connecté pour contacter un talent')
-    return
-  }
-  
-  // Rediriger vers la messagerie avec ce talent
-  router.push(`/messages?user=${talentId.value}`)
+const goBack = () => {
+  router.go(-1)
 }
 
 onMounted(loadTalent)
@@ -149,13 +161,6 @@ onMounted(loadTalent)
             
             <!-- Actions -->
             <div class="flex flex-wrap gap-4">
-              <button 
-                @click="contactTalent"
-                class="flex items-center gap-2 px-8 py-3 bg-primary text-white font-black rounded-2xl hover:scale-105 shadow-xl shadow-primary/20 transition-all active:scale-95"
-              >
-                <MessageCircle :size="20" />
-                Contacter
-              </button>
               <button class="flex items-center gap-2 px-8 py-3 bg-background text-text font-black rounded-2xl border border-border hover:border-primary transition-all">
                 <User :size="20" />
                 Suivre
@@ -167,12 +172,69 @@ onMounted(loadTalent)
     </div>
     
     <!-- Projects Section -->
-    <div v-if="talent && talent.projectsCount > 0" class="max-w-6xl mx-auto px-8 py-12">
-      <h2 class="text-2xl font-black text-text mb-8">Projets</h2>
-      <div class="text-center py-20 bg-surface rounded-3xl border border-border">
+    <div v-if="talent" class="max-w-6xl mx-auto px-8 py-12">
+      <h2 class="text-2xl font-black text-text mb-8">Projets ({{ projects.length }})</h2>
+      
+      <div v-if="projectsLoading" class="text-center py-12">
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <p class="mt-4 text-text-muted">Chargement des projets...</p>
+      </div>
+      
+      <div v-else-if="projects.length === 0" class="text-center py-12 bg-surface rounded-3xl border border-border">
         <Briefcase :size="48" class="text-text-muted mx-auto mb-4" />
-        <h3 class="text-lg font-black text-text mb-2">Projets bientôt disponibles</h3>
-        <p class="text-text-muted">Ce talent n'a pas encore publié ses projets.</p>
+        <h3 class="text-lg font-black text-text mb-2">Aucun projet</h3>
+        <p class="text-text-muted">Ce talent n'a pas encore publié de projets.</p>
+      </div>
+      
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div 
+          v-for="project in projects" 
+          :key="project._id"
+          class="bg-surface rounded-xl overflow-hidden hover:shadow-lg transition-shadow border border-border group"
+        >
+          <div class="aspect-video bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+            <img 
+              v-if="project.image" 
+              :src="project.image" 
+              :alt="project.title"
+              class="w-full h-full object-cover"
+            />
+            <div v-else class="text-4xl">🚀</div>
+          </div>
+          
+          <div class="p-6">
+            <h3 class="text-lg font-semibold text-text mb-2 group-hover:text-primary transition-colors">
+              {{ project.title }}
+            </h3>
+            <p class="text-text-muted text-sm mb-4 line-clamp-2">{{ project.description }}</p>
+            
+            <div class="flex flex-wrap gap-2 mb-4">
+              <span 
+                v-for="tag in project.tags?.slice(0, 3)" 
+                :key="tag"
+                class="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
+              >
+                {{ tag }}
+              </span>
+            </div>
+            
+            <div class="flex justify-between items-center">
+              <span class="text-xs text-text-muted">
+                {{ new Date(project.createdAt).toLocaleDateString('fr-FR', { 
+                  day: 'numeric', 
+                  month: 'short', 
+                  year: 'numeric' 
+                }) }}
+              </span>
+              <router-link 
+                :to="`/projects/${project._id}`"
+                class="text-primary hover:text-primary/80 text-sm font-medium transition-colors"
+              >
+                Voir →
+              </router-link>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

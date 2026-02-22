@@ -75,6 +75,8 @@ onMounted(async () => {
     projects.value = await fetchMyProjects(auth.state.token)
   } catch (error) {
     console.error('Erreur chargement projets:', error)
+    // Ne pas déconnecter automatiquement, juste afficher l'erreur
+    // L'utilisateur peut se déconnecter manuellement si nécessaire
   }
 })
 </script>

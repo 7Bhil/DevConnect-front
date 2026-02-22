@@ -1,8 +1,14 @@
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { PlusCircle, Bell, User, LogOut, Sun, Moon, LogIn, X, MessageCircle, Briefcase } from 'lucide-vue-next'
+import { PlusCircle, Bell, User, Sun, Moon, LogIn, X, Briefcase, LogOut, Settings } from 'lucide-vue-next'
 import { useAuth } from '../store/auth'
+import { 
+  fetchNotifications, 
+  markNotificationAsRead, 
+  markAllNotificationsAsRead,
+  getUnreadNotificationsCount
+} from '../api'
 
 const router = useRouter()
 const auth = useAuth()
@@ -11,6 +17,7 @@ const showNotifications = ref(false)
 const notifications = ref([])
 const notificationCount = ref(0)
 const isDark = ref(document.documentElement.classList.contains('dark'))
+const tokenInvalid = ref(false) // Flag pour éviter les appels répétés
 
 // Watcher pour détecter les changements d'authentification
 watch(() => auth.state.isAuthenticated, (newValue) => {
@@ -25,51 +32,87 @@ watch(() => router.currentRoute.value, () => {
 // Synchroniser au montage du composant
 onMounted(() => {
   auth.syncWithStorage()
-  loadNotifications()
+  
+  // Désactiver temporairement le chargement des notifications
+  // TODO: Réactiver quand le token sera valide
+  console.log('Notifications désactivées temporairement')
+  
+  // Vérifier si le token est valide en testant une requête simple
+  // if (auth.state.isAuthenticated) {
+  //   testTokenValidity()
+  // } else {
+  //   loadNotifications()
+  //   loadUnreadCount()
+  // }
 })
 
-// Load notifications from API
-const loadNotifications = async () => {
+// Test si le token est valide
+const testTokenValidity = async () => {
   try {
-    // For now, we'll use mock data but structure for real API
-    const mockNotifications = [
-      {
-        id: 1,
-        type: 'message',
-        title: 'Nouveau message',
-        message: 'Jean Dupont vous a envoyé un message concernant votre projet React.',
-        read: false,
-        createdAt: new Date(Date.now() - 1000 * 60 * 5)
-      },
-      {
-        id: 2,
-        type: 'project',
-        title: 'Projet mis en avant',
-        message: 'Votre projet "Dashboard Analytics" a été ajouté aux projets vedettes.',
-        read: false,
-        createdAt: new Date(Date.now() - 1000 * 60 * 60)
-      },
-      {
-        id: 3,
-        type: 'job',
-        title: 'Nouvelle offre d\'emploi',
-        message: 'Une offre correspondant à "Développeur React" a été publiée.',
-        read: true,
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24)
-      }
-    ]
-    
-    notifications.value = mockNotifications
-    notificationCount.value = mockNotifications.filter(n => !n.read).length
+    await getUnreadNotificationsCount()
+    loadNotifications()
+    loadUnreadCount()
   } catch (error) {
-    console.error('Error loading notifications:', error)
+    console.log('Token invalide, déconnexion forcée...')
+    tokenInvalid.value = true // Marquer le token comme invalide
+    auth.logout()
+    router.push('/login')
+    return // Arrêter l'exécution
   }
 }
 
-// Load notifications on mount
-onMounted(() => {
-  loadNotifications()
-})
+// Load notifications from API
+const loadNotifications = async () => {
+  if (tokenInvalid.value) return // Ne pas appeler si token invalide
+  
+  try {
+    if (!auth.state.isAuthenticated) {
+      notifications.value = []
+      notificationCount.value = 0
+      return
+    }
+
+    const data = await fetchNotifications()
+    notifications.value = data.notifications
+    notificationCount.value = data.unreadCount
+  } catch (error) {
+    console.error('Error loading notifications:', error)
+    // Vérifier si c'est une erreur 401
+    if (error.message.includes('401') || 
+        error.message.includes('Unauthorized') ||
+        error.message.includes('Failed to fetch')) {
+      tokenInvalid.value = true
+      auth.logout()
+      router.push('/login')
+      return
+    }
+    notifications.value = []
+    notificationCount.value = 0
+  }
+}
+
+// Load unread count
+const loadUnreadCount = async () => {
+  if (tokenInvalid.value) return // Ne pas appeler si token invalide
+  
+  try {
+    if (!auth.state.isAuthenticated) return
+    
+    const data = await getUnreadNotificationsCount()
+    notificationCount.value = data.count
+  } catch (error) {
+    console.error('Error loading unread count:', error)
+    // Vérifier si c'est une erreur 401
+    if (error.message.includes('401') || 
+        error.message.includes('Unauthorized') ||
+        error.message.includes('Failed to fetch')) {
+      tokenInvalid.value = true
+      auth.logout()
+      router.push('/login')
+      return
+    }
+  }
+}
 
 const toggleTheme = () => {
   isDark.value = !isDark.value
@@ -90,9 +133,9 @@ const handleLogout = () => {
 // Notification functions
 const getNotificationIcon = (type) => {
   switch (type) {
-    case 'message': return MessageCircle
     case 'project': return Briefcase
     case 'job': return User
+    case 'application': return Briefcase
     default: return Bell
   }
 }
@@ -110,14 +153,26 @@ const formatTime = (date) => {
   return `Il y a ${days} jour${days > 1 ? 's' : ''}`
 }
 
-const markAsRead = (id) => {
-  const notification = notifications.value.find(n => n.id === id)
-  if (notification && !notification.read) {
-    notification.read = true
-    notificationCount.value = Math.max(0, notificationCount.value - 1)
-    
-    // Here you would also call API to mark as read
-    // await markNotificationAsRead(id)
+const markAsRead = async (id) => {
+  try {
+    const notification = notifications.value.find(n => n._id === id)
+    if (notification && !notification.read) {
+      await markNotificationAsRead(id)
+      notification.read = true
+      notificationCount.value = Math.max(0, notificationCount.value - 1)
+    }
+  } catch (error) {
+    console.error('Error marking notification as read:', error)
+  }
+}
+
+const markAllAsRead = async () => {
+  try {
+    await markAllNotificationsAsRead()
+    notifications.value.forEach(n => n.read = true)
+    notificationCount.value = 0
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error)
   }
 }
 
@@ -150,25 +205,25 @@ const addNotification = (notification) => {
         <Moon v-else :size="20" />
       </button>
 
-      <!-- Notifications -->
+      <!-- Notifications (désactivées temporairement) -->
       <div class="relative">
         <button 
-          @click="showNotifications = !showNotifications"
           class="p-2 text-text-muted hover:bg-primary/5 rounded-full transition-colors relative"
           aria-label="Notifications"
+          title="Notifications désactivées temporairement"
         >
           <Bell :size="20" />
-          <!-- Notification Badge -->
-          <span 
+          <!-- Badge masqué temporairement -->
+          <!-- <span 
             v-if="notificationCount > 0"
             class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center animate-pulse"
           >
             {{ notificationCount > 99 ? '99+' : notificationCount }}
-          </span>
+          </span> -->
         </button>
         
-        <!-- Notifications Dropdown -->
-        <div 
+        <!-- Dropdown masqué temporairement -->
+        <!-- <div 
           v-if="showNotifications"
           class="absolute right-0 top-full mt-2 w-80 bg-surface border border-border rounded-2xl shadow-2xl shadow-text/10 z-50"
         >
@@ -188,7 +243,8 @@ const addNotification = (notification) => {
             <div v-else class="divide-y divide-border">
               <div 
                 v-for="notification in notifications.slice(0, 5)" 
-                :key="notification.id"
+                :key="notification._id"
+                @click="markAsRead(notification._id)"
                 class="p-4 hover:bg-background transition-colors cursor-pointer"
                 :class="{ 'bg-primary/5': !notification.read }"
               >
@@ -208,11 +264,20 @@ const addNotification = (notification) => {
           </div>
           
           <div class="p-4 border-t border-border">
-            <button class="w-full py-2 bg-background text-text rounded-xl text-sm font-bold hover:bg-surface transition-colors">
-              Voir toutes les notifications
-            </button>
+            <div class="flex gap-2">
+              <button 
+                v-if="notificationCount > 0"
+                @click="markAllAsRead"
+                class="flex-1 py-2 bg-background text-text rounded-xl text-sm font-bold hover:bg-surface transition-colors"
+              >
+                Marquer tout comme lu
+              </button>
+              <button class="flex-1 py-2 bg-background text-text rounded-xl text-sm font-bold hover:bg-surface transition-colors">
+                Voir toutes les notifications
+              </button>
+            </div>
           </div>
-        </div>
+        </div> -->
       </div>
 
       <template v-if="auth.state.isAuthenticated">
@@ -229,30 +294,49 @@ const addNotification = (notification) => {
             aria-label="Profile menu"
             class="flex items-center gap-2 sm:gap-3 p-1 rounded-full hover:bg-primary/5 transition-colors"
           >
-            <div class="text-right hidden sm:block">
-              <p class="text-xs font-bold text-text leading-tight">{{ auth.state.user?.name }}</p>
-              <p class="text-[10px] text-text-muted font-medium uppercase tracking-wider">{{ auth.state.user?.role }}</p>
-            </div>
-            <img :src="auth.state.user?.avatar || 'https://ui-avatars.com/api/?name=U&background=7f9cf5&color=fff&size=200'" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-primary/20" alt="Avatar" />
+            <img 
+              :src="auth.state.user?.avatar || `https://ui-avatars.com/api/?name=${auth.state.user?.name || 'U'}&background=45b7d1&color=fff&size=200&font-size=100&bold=true`" 
+              :alt="auth.state.user?.name"
+              class="w-8 h-8 rounded-full object-cover border-2 border-primary/20"
+            />
+            <span class="hidden sm:block text-sm font-medium text-text">{{ auth.state.user?.name }}</span>
           </button>
           
-          <transition
-            enter-active-class="transition duration-200 ease-out"
-            enter-from-class="transform scale-95 opacity-0"
-            enter-to-class="transform scale-100 opacity-100"
-            leave-active-class="transition duration-75 ease-in"
-            leave-from-class="transform scale-100 opacity-100"
-            leave-to-class="transform scale-95 opacity-0"
+          <!-- Profile Dropdown -->
+          <div 
+            v-if="showProfileMenu"
+            class="absolute right-0 top-full mt-2 w-56 bg-surface border border-border rounded-2xl shadow-2xl shadow-text/10 z-50"
           >
-            <div v-if="showProfileMenu" class="profile-menu absolute right-0 mt-2 w-48 bg-surface rounded-xl shadow-xl border border-border p-2 z-50">
-              <router-link to="/profile" @click="showProfileMenu = false" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-text hover:bg-primary/5 transition-colors">
-                <User :size="16" /> Mon Profil
+            <div class="p-2">
+              <router-link 
+                to="/profile"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary/5 transition-colors text-text"
+                @click="showProfileMenu = false"
+              >
+                <User :size="18" />
+                <span>Mon Profil</span>
               </router-link>
-              <button @click="handleLogout" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-500/5 transition-colors">
-                <LogOut :size="16" /> Déconnexion
+              
+              <router-link 
+                to="/settings"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-primary/5 transition-colors text-text"
+                @click="showProfileMenu = false"
+              >
+                <Settings :size="18" />
+                <span>Paramètres</span>
+              </router-link>
+              
+              <hr class="my-2 border-border">
+              
+              <button 
+                @click="handleLogout"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-5 hover:text-red-500 transition-colors text-text"
+              >
+                <LogOut :size="18" />
+                <span>Déconnexion</span>
               </button>
             </div>
-          </transition>
+          </div>
         </div>
       </template>
 
